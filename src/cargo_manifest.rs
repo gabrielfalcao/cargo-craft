@@ -1,5 +1,6 @@
 use toml::{Table, Value};
 
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct CargoManifest {
     manifest: Table,
 }
