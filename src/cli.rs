@@ -1,4 +1,3 @@
-use crate::cargo_manifest::CargoManifest;
 use crate::helpers::extend_table;
 
 use clap::Parser;
@@ -171,15 +170,6 @@ impl Craft {
         } else {
             None
         }
-    }
-
-    pub fn cargo_manifest(&self) -> CargoManifest {
-        let mut manifest = CargoManifest::default();
-        manifest.set_package_key_value("name", self.crate_name());
-        manifest.set_package_key_value("version", self.version());
-        manifest.set_lib_entry(self.lib_entry());
-        manifest.set_bin_entries(self.bin_entries());
-        manifest
     }
 
     pub fn path(&self) -> Path {

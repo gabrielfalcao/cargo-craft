@@ -9,6 +9,8 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
         .unwrap();
     tera.add_raw_template("cli", include_str!("./templates/cli.rs.tera"))
         .unwrap();
+    tera.add_raw_template("Cargo.toml", include_str!("./templates/Cargo.toml.tera"))
+        .unwrap();
 
     let mut context = Context::new();
     context.insert("crate_name", &craft.crate_name());
@@ -47,4 +49,10 @@ pub fn render_cli(craft: &Craft) -> Option<String> {
     } else {
         None
     }
+}
+
+pub fn render_manifest(craft: &Craft) -> String {
+    let (tera, context) = tera(craft);
+    let rendered = tera.render("Cargo.toml", &context).unwrap();
+    rendered
 }

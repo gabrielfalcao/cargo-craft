@@ -1,6 +1,6 @@
 use ::std::process::{Command, Stdio};
 use cargo_craft::cli::{path_to_entry_path, Craft};
-use cargo_craft::templates::{render_cli, render_errors, render_lib};
+use cargo_craft::templates::{render_cli, render_errors, render_lib, render_manifest};
 use clap::Parser;
 use iocore::Path;
 use sanitation::SString;
@@ -10,14 +10,10 @@ use toml::Table;
 fn main() {
     let args = Craft::parse();
 
-    let mut manifest = args.cargo_manifest();
-    let manifest_string = manifest.to_string_pretty().unwrap();
     let manifest_path = args.manifest_path();
+    let manifest_string = render_manifest(&args);
     manifest_path.write(&manifest_string.into_bytes()).unwrap();
     println!("wrote {}", manifest_path);
-
-    manifest.set_lib_entry(args.lib_entry());
-    manifest.set_bin_entries(args.bin_entries());
 
     for (template, target) in vec![
         (render_lib(&args), vec![args.lib_entry()]),
@@ -49,16 +45,17 @@ fn main() {
             }
         }
     }
-    shell_command(format!("cargo add clap -F derive,env"), args.path());
-    shell_command(format!("cargo add serde"), args.path());
-    shell_command(
+    let _ = shell_command(format!("cargo add clap -F derive,env"), args.path());
+    let _ = shell_command(format!("cargo add serde"), args.path());
+    let _ = shell_command(
         format!("cargo add ~/projects/work/poems.codes/tools/gadgets/packages/iocore"),
         args.path(),
     );
 }
 
 fn shell_command(command: String, current_dir: Path) -> (String, String, i32) {
-    shell_command_opts(command.clone(), current_dir.clone(), None, None, None, None).expect(&format!("spawn command {:#?}", &command))
+    shell_command_opts(command.clone(), current_dir.clone(), None, None, None, None)
+        .expect(&format!("spawn command {:#?}", &command))
 }
 fn shell_command_opts(
     command: String,
