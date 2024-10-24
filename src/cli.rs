@@ -3,7 +3,39 @@ use crate::helpers::extend_table;
 
 use clap::Parser;
 use iocore::Path;
+use regex::Regex;
 use toml::{Table, Value};
+
+pub fn slug(text: &str, sep: Option<&str>) -> String {
+    let re = Regex::new("[^a-zA-Z0-9-]+").unwrap();
+    re.replace_all(text, sep.unwrap_or("-").to_string())
+        .to_string()
+}
+pub fn acceptable_crate_name(val: &str) -> ::std::result::Result<String, String> {
+    let re = Regex::new("[^a-zA-Z0-9_-]+").unwrap();
+    if re.is_match(val) {
+        Err(format!(
+            "{:#?} does not appear to be a valid crate name",
+            val
+        ))
+    } else {
+        Ok(val.to_string())
+    }
+}
+pub fn valid_package_name(val: &str) -> ::std::result::Result<String, String> {
+    let re = Regex::new("[^a-zA-Z0-9_]+").unwrap();
+    if re.is_match(val) {
+        Err(format!("{:#?} is not a valid package name", val))
+    } else {
+        Ok(val.to_string())
+    }
+}
+pub fn path_to_entry_path(entry: Option<Table>) -> Option<Path> {
+    match entry?.get("path")? {
+        Value::String(path) => Some(Path::new(path)),
+        _ => None,
+    }
+}
 
 pub fn valid_manifest_path(val: &str) -> ::std::result::Result<Path, String> {
     let path = Path::new(val);
@@ -14,17 +46,13 @@ pub fn valid_manifest_path(val: &str) -> ::std::result::Result<Path, String> {
     Ok(path)
 }
 
-pub fn path_to_entry_path(entry: Option<Table>) -> Option<Path> {
-    match entry?.get("path")? {
-        Value::String(path) => Some(Path::new(path)),
-        _ => None,
-    }
-}
-
 #[derive(Parser, Debug)]
 pub struct Craft {
-    #[arg()]
-    name: String,
+    #[arg(value_parser = acceptable_crate_name)]
+    name: Option<String>,
+
+    #[arg(short, long, value_parser = valid_package_name)]
+    package_name: Option<String>,
 
     #[arg(long, default_value = "0.1.0")]
     version: String,
@@ -35,7 +63,7 @@ pub struct Craft {
     #[arg(short, long)]
     dep: Vec<String>,
 
-    #[arg(short, long)]
+    #[arg(short, long, required_unless_present("cli"))]
     pub lib: bool,
 
     #[arg(short, long, required_unless_present("lib"))]
@@ -52,8 +80,18 @@ pub struct Craft {
 }
 
 impl Craft {
-    pub fn name(&self) -> String {
-        self.name.clone()
+    pub fn crate_name(&self) -> String {
+        self.name.clone().unwrap_or(self.at.name())
+    }
+    pub fn package_name(&self) -> String {
+        slug(
+            &self
+                .package_name
+                .clone()
+                .or(Some(self.crate_name()))
+                .unwrap(),
+            Some("_"),
+        )
     }
 
     pub fn version(&self) -> String {
@@ -61,14 +99,13 @@ impl Craft {
     }
 
     pub fn lib_path(&self) -> String {
-        self.lib_path.clone().unwrap_or(self.name.clone())
+        self.lib_path.clone().unwrap_or(self.crate_name())
     }
 
     pub fn lib_options() -> Table {
         let mut options = Table::new();
         for falsy in ["doctest", "bench"] {
-            options
-                .insert(falsy.to_string(), Value::Boolean(false));
+            options.insert(falsy.to_string(), Value::Boolean(false));
         }
         options
     }
@@ -84,7 +121,7 @@ impl Craft {
     pub fn bin_names(&self) -> Vec<String> {
         let mut binaries = self.bin.clone();
         if self.bin.len() == 0 && self.cli {
-            binaries.push(self.name());
+            binaries.push(self.crate_name());
         }
         binaries
     }
@@ -111,14 +148,10 @@ impl Craft {
     pub fn lib_entry(&self) -> Option<Table> {
         if self.lib {
             let mut entry = Table::new();
-            entry.insert("name".to_string(), Value::String(self.name.to_string()));
+            entry.insert("name".to_string(), Value::String(self.package_name()));
             entry.insert(
                 "path".to_string(),
-                Value::String(
-                    Path::new(&self.lib_path())
-                        .join(format!("{}.rs", self.name()))
-                        .to_string(),
-                ),
+                Value::String(Path::new(&self.lib_path()).join("lib.rs").to_string()),
             );
             Some(extend_table(&Craft::bin_options(), &entry))
         } else {
@@ -129,14 +162,10 @@ impl Craft {
     pub fn errors_entry(&self) -> Option<Table> {
         if self.lib {
             let mut entry = Table::new();
-            entry.insert("name".to_string(), Value::String(self.name.to_string()));
+            entry.insert("name".to_string(), Value::String(self.package_name()));
             entry.insert(
                 "path".to_string(),
-                Value::String(
-                    Path::new(&self.bin_path)
-                        .join("errors.rs")
-                        .to_string(),
-                ),
+                Value::String(Path::new(&self.bin_path).join("errors.rs").to_string()),
             );
             Some(extend_table(&Craft::bin_options(), &entry))
         } else {
@@ -146,7 +175,7 @@ impl Craft {
 
     pub fn cargo_manifest(&self) -> CargoManifest {
         let mut manifest = CargoManifest::default();
-        manifest.set_package_key_value("name", self.name());
+        manifest.set_package_key_value("name", self.crate_name());
         manifest.set_package_key_value("version", self.version());
         manifest.set_lib_entry(self.lib_entry());
         manifest.set_bin_entries(self.bin_entries());

@@ -124,6 +124,8 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "iocore",
+ "regex",
+ "sanitation",
  "serde",
  "tera",
  "toml",

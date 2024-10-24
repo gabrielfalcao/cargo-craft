@@ -1,5 +1,5 @@
 [package]
-name = "cargo-craft"
+name = "{{ crate_name }}"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,6 +8,24 @@ clap = { version = "4.5.20", features = ["cargo", "derive", "env"] }
 tera = { version = "1.20.0", features = ["preserve_order"] }
 toml = { version = "0.8.19", features = ["preserve_order", "display"] }
 iocore = { path = "../gadgets/packages/iocore" }
-sanitation = { path = "../gadgets/packages/sanitation" }
 serde = { version = "1.0.213", features = ["derive"] }
 regex = "1.11.0"
+
+{% if lib %}
+[lib]
+name = "{{ crate_lib["name"] }}"
+path = "{{ crate_lib["path"] }}"
+doctest = false
+bench = false
+{% endif %}
+
+{% if cli %}
+{% for entry in crate_binaries %}
+[[bin]]
+name = "{{ entry["name"] }}"
+path = "{{ entry["path"] }}"
+doctest = false
+bench = false
+doc = false
+{% endfor %}
+{% endif %}
