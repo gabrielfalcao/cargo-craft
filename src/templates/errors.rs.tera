@@ -1,4 +1,5 @@
-use serde::Serializer;
+use serde::{Serializer, Serialize};
+use serde::ser::SerializeStruct;
 use std::fmt::Display;
 use std::num::ParseIntError;
 use std::string::FromUtf8Error;

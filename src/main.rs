@@ -43,8 +43,8 @@ fn main() {
             }
         }
     }
-    shell_command(format!("cargo add clap -F derive,env"), args.path());
-    shell_command(format!("cargo add serde"), args.path());
+    shell_command(format!("cargo add serde -F derive"), args.path());
+    shell_command(format!("cargo add clap -F derive,env,string,unicode,wrap_help"), args.path());
 }
 
 fn shell_command(command: String, current_dir: Path) {

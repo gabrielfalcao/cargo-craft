@@ -1,6 +1,8 @@
-use clap::{Parser, Subcommand, Args, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
+use clap::builder::{PossibleValue};
+use std::fmt::Display;
 {% if craft_lib %}
-use {{ package_name }}::error::Result;
+use {{ package_name }}::errors::Result;
 {% endif %}
 
 #[derive(Parser, Debug)]
@@ -9,7 +11,7 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
 
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "stdout")]
     output: Output,
 }
 
@@ -77,13 +79,16 @@ fn main()  {
 {% endif %}
     let args = Cli::parse();
     match args.command {
-        Command::Hello(op) => {
-            println!("{}", op.text);
-        },
-    } {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            ::std::process::exit(1);
+        Command::Hello(op) => match args.output {
+            Output::Stdout => {
+                println!("{}", op.text);
+            },
+            Output::Stderr => {
+                eprintln!("{}", op.text);
+            },
         },
     }
+    {% if craft_lib %}
+    Ok(())
+    {% endif %}
 }
