@@ -3,8 +3,6 @@ use cargo_craft::cli::{path_to_entry_path, Craft};
 use cargo_craft::templates::{render_cli, render_errors, render_lib, render_manifest};
 use clap::Parser;
 use iocore::Path;
-use sanitation::SString;
-use std::collections::BTreeMap;
 use toml::Table;
 
 fn main() {
@@ -45,77 +43,36 @@ fn main() {
             }
         }
     }
-    let _ = shell_command(format!("cargo add clap -F derive,env"), args.path());
-    let _ = shell_command(format!("cargo add serde"), args.path());
-    let _ = shell_command(
-        format!("cargo add ~/projects/work/poems.codes/tools/gadgets/packages/iocore"),
-        args.path(),
-    );
+    shell_command(format!("cargo add clap -F derive,env"), args.path());
+    shell_command(format!("cargo add serde"), args.path());
 }
 
-fn shell_command(command: String, current_dir: Path) -> (String, String, i32) {
-    shell_command_opts(command.clone(), current_dir.clone(), None, None, None, None)
-        .expect(&format!("spawn command {:#?}", &command))
+fn shell_command(command: String, current_dir: Path) {
+    let exit_code = shell_command_opts(command.clone(), current_dir.clone())
+        .expect(&format!("spawn command {:#?}", &command));
+    if exit_code != 0 {
+        panic!(
+            "command {:#?} failed with exit code {}",
+            &command, exit_code
+        );
+    }
 }
-fn shell_command_opts(
-    command: String,
-    current_dir: Path,
-    env_clear: Option<bool>,
-    env_remove: Option<Vec<String>>,
-    env: Option<BTreeMap<String, String>>,
-    shell: Option<String>,
-) -> Result<(String, String, i32), String> {
-    let env_clear = env_clear.unwrap_or_default();
-    let env_remove = env_remove.unwrap_or_default();
-    let env = env.unwrap_or_default();
-    let shell = shell.unwrap_or("/bin/sh".to_string());
-
-    let mut args = vec![shell.to_string(), String::from("-c")];
-    args.push(format!("\"{}\"", &command));
-    let mut cmd = Command::new(&shell);
+fn shell_command_opts(command: String, current_dir: Path) -> Result<i32, String> {
+    eprintln!("running {:#?} in {}", &command, &current_dir);
+    let args = command
+        .split(" ")
+        .map(|arg| arg.trim().to_string())
+        .collect::<Vec<String>>();
+    let mut cmd = Command::new(args[0].clone());
     let cmd = cmd.current_dir(current_dir.to_string());
-    let cmd = cmd.args(args.clone());
-    let cmd = cmd.stdin(Stdio::piped());
-    let cmd = cmd.stdout(Stdio::piped());
-    let mut cmd = cmd.stderr(Stdio::piped());
-
-    if env_clear {
-        cmd = cmd.env_clear();
-    }
-    for env in &env_remove {
-        cmd = cmd.env_remove(env);
-    }
-
-    for (n, d) in env {
-        cmd = cmd.env(n, d);
-    }
-
+    let cmd = cmd.args(args[1..].to_vec());
+    let cmd = cmd.stdin(Stdio::null());
+    let cmd = cmd.stdout(Stdio::inherit());
+    let cmd = cmd.stderr(Stdio::inherit());
     let mut subprocess = cmd.spawn().map_err(|e| e.to_string())?;
-    let eco = subprocess
+    Ok(subprocess
         .wait()
         .map_err(|e| e.to_string())?
         .code()
-        .unwrap_or_default();
-
-    let stderr = subprocess
-        .stderr
-        .map(|stderr| {
-            SString::from_io_read(stderr)
-                .map_err(|e| format!("{} stderr: {}", command, e))
-                .unwrap_or_default()
-        })
-        .unwrap_or_default()
-        .unchecked_safe();
-
-    let stdout = subprocess
-        .stdout
-        .map(|stdout| {
-            SString::from_io_read(stdout)
-                .map_err(|e| format!("{} stdout: {}", command, e))
-                .unwrap_or_default()
-        })
-        .unwrap_or_default()
-        .unchecked_safe();
-
-    Ok((stdout, stderr, eco))
+        .unwrap_or_default())
 }

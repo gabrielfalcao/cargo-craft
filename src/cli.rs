@@ -161,10 +161,9 @@ impl Craft {
     pub fn errors_entry(&self) -> Option<Table> {
         if self.lib {
             let mut entry = Table::new();
-            entry.insert("name".to_string(), Value::String(self.package_name()));
             entry.insert(
                 "path".to_string(),
-                Value::String(Path::new(&self.bin_path).join("errors.rs").to_string()),
+                Value::String(Path::new(&self.lib_path()).join("errors.rs").to_string()),
             );
             Some(extend_table(&Craft::bin_options(), &entry))
         } else {

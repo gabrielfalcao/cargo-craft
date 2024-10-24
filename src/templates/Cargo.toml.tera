@@ -1,17 +1,11 @@
 [package]
 name = "{{ crate_name }}"
-version = "0.1.0"
+version = "{{ crate_version }}"
 edition = "2021"
 
 [dependencies]
-clap = { version = "4.5.20", features = ["cargo", "derive", "env"] }
-tera = { version = "1.20.0", features = ["preserve_order"] }
-toml = { version = "0.8.19", features = ["preserve_order", "display"] }
-iocore = { path = "../gadgets/packages/iocore" }
-serde = { version = "1.0.213", features = ["derive"] }
-regex = "1.11.0"
 
-{% if lib %}
+{% if craft_lib %}
 [lib]
 name = "{{ crate_lib["name"] }}"
 path = "{{ crate_lib["path"] }}"
@@ -19,7 +13,7 @@ doctest = false
 bench = false
 {% endif %}
 
-{% if cli %}
+{% if craft_cli %}
 {% for entry in crate_binaries %}
 [[bin]]
 name = "{{ entry["name"] }}"

@@ -14,6 +14,7 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
 
     let mut context = Context::new();
     context.insert("crate_name", &craft.crate_name());
+    context.insert("crate_version", &craft.version());
     context.insert("package_name", &craft.package_name());
     context.insert("craft_lib", &craft.lib);
     context.insert("craft_cli", &craft.cli);
