@@ -2,18 +2,20 @@
 name = "{{ crate_name }}"
 version = "{{ crate_version }}"
 edition = "2021"
+[package.metadata]
+cargo-args = ["-Zmtime-on-use", "-Zavoid-dev-deps"]
+targets = [
+    "aarch64-apple-darwin",
+]
 
 [dependencies]
-
 {% if craft_lib %}
 [lib]
 name = "{{ crate_lib["name"] }}"
 path = "{{ crate_lib["path"] }}"
 doctest = false
 bench = false
-{% endif %}
-
-{% if craft_cli %}
+{% endif %}{% if craft_cli %}
 {% for entry in crate_binaries %}
 [[bin]]
 name = "{{ entry["name"] }}"
@@ -21,5 +23,4 @@ path = "{{ entry["path"] }}"
 doctest = false
 bench = false
 doc = false
-{% endfor %}
-{% endif %}
+{% endfor %}{% endif %}

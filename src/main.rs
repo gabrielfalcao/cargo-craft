@@ -43,10 +43,18 @@ fn main() {
             }
         }
     }
-    shell_command(format!("cargo add serde -F derive"), args.path());
-    shell_command(format!("cargo add clap -F derive,env,string,unicode,wrap_help"), args.path());
+    cargo_add("serde -F derive", args.path());
+    if args.bin_entries().len() > 0 {
+        cargo_add("clap -F derive,env,string,unicode,wrap_help", args.path());
+    }
 }
 
+fn cargo_add(dep: impl std::fmt::Display, current_dir: Path) {
+    shell_command(
+        format!("cargo add --target aarch64-apple-darwin {}", dep),
+        current_dir,
+    );
+}
 fn shell_command(command: String, current_dir: Path) {
     let exit_code = shell_command_opts(command.clone(), current_dir.clone())
         .expect(&format!("spawn command {:#?}", &command));

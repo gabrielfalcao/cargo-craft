@@ -37,6 +37,7 @@ pub fn path_to_entry_path(entry: Option<Table>) -> Option<Path> {
 }
 
 pub fn valid_manifest_path(val: &str) -> ::std::result::Result<Path, String> {
+    let val = acceptable_crate_name(val)?;
     let path = Path::new(val);
     let manifest_path = path.join("Cargo.toml");
     if manifest_path.is_file() {
@@ -47,8 +48,8 @@ pub fn valid_manifest_path(val: &str) -> ::std::result::Result<Path, String> {
 
 #[derive(Parser, Debug)]
 pub struct Craft {
-    #[arg(value_parser = acceptable_crate_name)]
-    name: Option<String>,
+    #[arg(value_parser = valid_manifest_path)]
+    at: Path,
 
     #[arg(short, long, value_parser = valid_package_name)]
     package_name: Option<String>,
@@ -56,8 +57,6 @@ pub struct Craft {
     #[arg(long, default_value = "0.1.0")]
     version: String,
 
-    #[arg(short, long, default_value = ".", value_parser = valid_manifest_path)]
-    at: Path,
 
     #[arg(short, long)]
     dep: Vec<String>,
@@ -80,7 +79,7 @@ pub struct Craft {
 
 impl Craft {
     pub fn crate_name(&self) -> String {
-        self.name.clone().unwrap_or(self.at.name())
+        self.at.name()
     }
     pub fn package_name(&self) -> String {
         slug(
