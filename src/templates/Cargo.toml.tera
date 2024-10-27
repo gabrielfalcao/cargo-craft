@@ -13,6 +13,7 @@ targets = [
 [lib]
 name = "{{ crate_lib["name"] }}"
 path = "{{ crate_lib["path"] }}"
+{% if not craft_cli %}crate-type = ["dylib"]  #["lib", "dylib", "cdylib", "staticlib"] # https://doc.rust-lang.org/reference/linkage.html{% endif %}
 doctest = false
 bench = false
 {% endif %}{% if craft_cli %}

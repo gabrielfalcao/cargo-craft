@@ -51,7 +51,9 @@ fn main() {
 
 fn cargo_add(dep: impl std::fmt::Display, current_dir: Path) {
     shell_command(
-        format!("cargo add --target aarch64-apple-darwin {}", dep),
+        format!("cargo add {}", dep),
+        // format!("cargo add --target cfg(unix) {}", dep),
+        // format!("cargo add --target aarch64-apple-darwin {}", dep),
         current_dir,
     );
 }

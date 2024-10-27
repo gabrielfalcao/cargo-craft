@@ -16,7 +16,7 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
     context.insert("crate_name", &craft.crate_name());
     context.insert("crate_version", &craft.version());
     context.insert("package_name", &craft.package_name());
-    context.insert("craft_lib", &craft.lib);
+    context.insert("craft_lib", &true);
     context.insert("craft_cli", &craft.cli);
     context.insert("crate_binaries", &craft.bin_entries());
     context.insert("crate_lib", &craft.lib_entry());
@@ -24,22 +24,14 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
 }
 
 pub fn render_errors(craft: &Craft) -> Option<String> {
-    if craft.lib {
-        let (tera, context) = tera(craft);
-        let rendered = tera.render("errors", &context).unwrap();
-        Some(rendered)
-    } else {
-        None
-    }
+    let (tera, context) = tera(craft);
+    let rendered = tera.render("errors", &context).unwrap();
+    Some(rendered)
 }
 pub fn render_lib(craft: &Craft) -> Option<String> {
-    if craft.lib {
-        let (tera, context) = tera(craft);
-        let rendered = tera.render("lib", &context).unwrap();
-        Some(rendered)
-    } else {
-        None
-    }
+    let (tera, context) = tera(craft);
+    let rendered = tera.render("lib", &context).unwrap();
+    Some(rendered)
 }
 
 pub fn render_cli(craft: &Craft) -> Option<String> {

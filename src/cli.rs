@@ -57,14 +57,10 @@ pub struct Craft {
     #[arg(long, default_value = "0.1.0")]
     version: String,
 
-
     #[arg(short, long)]
     dep: Vec<String>,
 
-    #[arg(short, long, required_unless_present("cli"))]
-    pub lib: bool,
-
-    #[arg(short, long, required_unless_present("lib"))]
+    #[arg(short, long)]
     pub cli: bool,
 
     #[arg(short, long)]
@@ -144,30 +140,22 @@ impl Craft {
     }
 
     pub fn lib_entry(&self) -> Option<Table> {
-        if self.lib {
-            let mut entry = Table::new();
-            entry.insert("name".to_string(), Value::String(self.package_name()));
-            entry.insert(
-                "path".to_string(),
-                Value::String(Path::new(&self.lib_path()).join("lib.rs").to_string()),
-            );
-            Some(extend_table(&Craft::bin_options(), &entry))
-        } else {
-            None
-        }
+        let mut entry = Table::new();
+        entry.insert("name".to_string(), Value::String(self.package_name()));
+        entry.insert(
+            "path".to_string(),
+            Value::String(Path::new(&self.lib_path()).join("lib.rs").to_string()),
+        );
+        Some(extend_table(&Craft::bin_options(), &entry))
     }
 
     pub fn errors_entry(&self) -> Option<Table> {
-        if self.lib {
-            let mut entry = Table::new();
-            entry.insert(
-                "path".to_string(),
-                Value::String(Path::new(&self.lib_path()).join("errors.rs").to_string()),
-            );
-            Some(extend_table(&Craft::bin_options(), &entry))
-        } else {
-            None
-        }
+        let mut entry = Table::new();
+        entry.insert(
+            "path".to_string(),
+            Value::String(Path::new(&self.lib_path()).join("errors.rs").to_string()),
+        );
+        Some(extend_table(&Craft::bin_options(), &entry))
     }
 
     pub fn path(&self) -> Path {
