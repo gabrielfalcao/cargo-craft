@@ -6,7 +6,7 @@ use regex::Regex;
 use toml::{Table, Value};
 
 pub fn slug(text: &str, sep: Option<&str>) -> String {
-    let re = Regex::new("[^a-zA-Z0-9-]+").unwrap();
+    let re = Regex::new("[^a-zA-Z0-9_-]+").unwrap();
     re.replace_all(text, sep.unwrap_or("-").to_string())
         .to_string()
 }
@@ -93,7 +93,7 @@ impl Craft {
     }
 
     pub fn lib_path(&self) -> String {
-        self.lib_path.clone().unwrap_or(self.crate_name())
+        slug(&self.lib_path.clone().unwrap_or(self.crate_name()), Some("_"))
     }
 
     pub fn lib_options() -> Table {
