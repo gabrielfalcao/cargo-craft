@@ -71,6 +71,10 @@ pub struct Craft {
 
     #[arg(long, default_value = "cli")]
     bin_path: String,
+
+    #[arg(short, long)]
+    pub value_enum: bool,
+
 }
 
 impl Craft {

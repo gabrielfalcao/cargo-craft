@@ -1,8 +1,11 @@
-use clap::{Parser, Subcommand, ValueEnum};
-use clap::builder::{PossibleValue};
-use std::fmt::Display;
+use clap::{Parser, Subcommand};
+
 {% if craft_lib %}
 use {{ package_name }}::errors::Result;
+{% endif %}
+{% if craft_value_enum %}
+use clap::builder::PossibleValue;
+use clap::ValueEnum;
 {% endif %}
 
 #[derive(Parser, Debug)]
@@ -11,16 +14,20 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
 
+{% if craft_value_enum %}
     #[arg(short, long, default_value = "stdout")]
     output: Output,
+{% endif %}
 }
 
+
+{% if craft_value_enum %}
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Output {
     Stderr,
     Stdout,
 }
-impl Display for Output {
+impl std::fmt::Display for Output {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
@@ -59,6 +66,8 @@ impl ValueEnum for Output {
         })
     }
 }
+{% endif %}
+
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
@@ -79,6 +88,7 @@ fn main()  {
 {% endif %}
     let args = Cli::parse();
     match args.command {
+        {% if craft_value_enum %}
         Command::Hello(op) => match args.output {
             Output::Stdout => {
                 println!("{}", op.text);
@@ -87,6 +97,11 @@ fn main()  {
                 eprintln!("{}", op.text);
             },
         },
+        {% else %}
+        Command::Hello(op) => {
+            println!("{}", op.text);
+        },
+        {% endif %}
     }
     {% if craft_lib %}
     Ok(())

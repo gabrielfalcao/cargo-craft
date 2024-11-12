@@ -1,14 +1,19 @@
+cargo-features = ["per-package-target", "edition2024"]
+
 [package]
 name = "{{ crate_name }}"
 version = "{{ crate_version }}"
 edition = "2021"
+default-target = "aarch64-apple-darwin"
+autoexamples = false
+autobenches = false
+
 [package.metadata]
 cargo-args = ["-Zmtime-on-use", "-Zavoid-dev-deps"]
 targets = [
     "aarch64-apple-darwin",
 ]
 
-[dependencies]
 {% if craft_lib %}
 [lib]
 name = "{{ crate_lib["name"] }}"

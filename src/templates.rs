@@ -20,6 +20,7 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
     context.insert("craft_cli", &craft.cli);
     context.insert("crate_binaries", &craft.bin_entries());
     context.insert("crate_lib", &craft.lib_entry());
+    context.insert("craft_value_enum", &craft.value_enum);
     (tera, context)
 }
 
