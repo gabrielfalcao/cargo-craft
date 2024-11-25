@@ -9,7 +9,7 @@ use clap::ValueEnum;
 {% endif %}
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = "{{ package_name }}{% if craft_cli %}-cli{% else %}{% endif %}")]
+#[command(author, version, about, long_about = "{{ package_name }}{% if craft_cli %} command-line utility{% else %}{% endif %}")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,

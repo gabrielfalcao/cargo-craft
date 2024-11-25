@@ -1,6 +1,6 @@
 use ::std::process::{Command, Stdio};
 use cargo_craft::cli::{path_to_entry_path, Craft};
-use cargo_craft::templates::{render_cli, render_errors, render_lib, render_manifest};
+use cargo_craft::templates::{render, render_cli};
 use clap::Parser;
 use iocore::Path;
 use toml::Table;
@@ -9,13 +9,13 @@ fn main() {
     let args = Craft::parse();
 
     let manifest_path = args.manifest_path();
-    let manifest_string = render_manifest(&args);
-    manifest_path.write(&manifest_string.into_bytes()).unwrap();
+    let manifest_string = render(&args, "Cargo.toml").unwrap();
+    manifest_path.write(&manifest_string.as_bytes()).unwrap();
     println!("wrote {}", manifest_path);
 
-    for (template, target) in vec![
-        (render_lib(&args), vec![args.lib_entry()]),
-        (render_errors(&args), vec![args.errors_entry()]),
+    let mut ttargets = vec![
+        (render(&args, "lib.rs"), vec![args.lib_entry()]),
+        (render(&args, "errors.rs"), vec![args.errors_entry()]),
         (
             render_cli(&args),
             args.bin_entries()
@@ -23,7 +23,12 @@ fn main() {
                 .map(|entry| Some(entry.clone()))
                 .collect::<Vec<Option<Table>>>(),
         ),
-    ] {
+    ];
+    ttargets.extend(args.git_entries().iter().map(|entry| {
+        let name = entry.get("name").expect("entry name").as_str().expect("str");
+        (render(&args, name), vec![Some(entry.clone())])
+    }));
+    for (template, target) in ttargets {
         for target in target
             .iter()
             .filter(|entry| entry.is_some())
@@ -44,7 +49,7 @@ fn main() {
         }
     }
     cargo_add("serde -F derive", args.path());
-    if args.bin_entries().len() > 0 {
+    if args.cli || args.bin_entries().len() > 0 {
         cargo_add("clap -F derive,env,string,unicode,wrap_help", args.path());
     }
 }

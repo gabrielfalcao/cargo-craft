@@ -3,13 +3,15 @@ use tera::{Context, Tera};
 
 pub fn tera(craft: &Craft) -> (Tera, Context) {
     let mut tera = Tera::default();
-    tera.add_raw_template("errors", include_str!("./templates/errors.rs.tera"))
+    tera.add_raw_template("errors.rs", include_str!("./templates/errors.rs.tera"))
         .unwrap();
-    tera.add_raw_template("lib", include_str!("./templates/lib.rs.tera"))
+    tera.add_raw_template("lib.rs", include_str!("./templates/lib.rs.tera"))
         .unwrap();
     tera.add_raw_template("cli", include_str!("./templates/cli.rs.tera"))
         .unwrap();
     tera.add_raw_template("Cargo.toml", include_str!("./templates/Cargo.toml.tera"))
+        .unwrap();
+    tera.add_raw_template(".gitignore", include_str!("./templates/gitignore.tera"))
         .unwrap();
 
     let mut context = Context::new();
@@ -23,30 +25,17 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
     context.insert("craft_value_enum", &craft.value_enum);
     (tera, context)
 }
-
-pub fn render_errors(craft: &Craft) -> Option<String> {
+pub fn render(craft: &Craft, template_name: &str) -> Option<String> {
     let (tera, context) = tera(craft);
-    let rendered = tera.render("errors", &context).unwrap();
+    let rendered = tera
+        .render(template_name, &context)
+        .expect(&format!("render {}", template_name));
     Some(rendered)
 }
-pub fn render_lib(craft: &Craft) -> Option<String> {
-    let (tera, context) = tera(craft);
-    let rendered = tera.render("lib", &context).unwrap();
-    Some(rendered)
-}
-
 pub fn render_cli(craft: &Craft) -> Option<String> {
     if craft.cli {
-        let (tera, context) = tera(craft);
-        let rendered = tera.render("cli", &context).unwrap();
-        Some(rendered)
+        render(craft, "cli")
     } else {
         None
     }
-}
-
-pub fn render_manifest(craft: &Craft) -> String {
-    let (tera, context) = tera(craft);
-    let rendered = tera.render("Cargo.toml", &context).unwrap();
-    rendered
 }

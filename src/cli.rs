@@ -38,9 +38,14 @@ pub fn path_to_entry_path(entry: Option<Table>) -> Option<Path> {
 
 pub fn valid_manifest_path(val: &str) -> ::std::result::Result<Path, String> {
     let val = acceptable_crate_name(val)?;
-    let path = Path::new(val);
+    let path = Path::new(val).try_canonicalize();
+    let path = if path.name() == "Cargo.toml" && !path.is_dir() {
+        path.parent().expect(&format!("parent of {}", &path))
+    } else {
+        path.clone()
+    };
     let manifest_path = path.join("Cargo.toml");
-    if manifest_path.is_file() {
+    if !manifest_path.is_dir() {
         return Err(format!("{} already exists", &manifest_path));
     }
     Ok(path)
@@ -74,7 +79,6 @@ pub struct Craft {
 
     #[arg(short, long)]
     pub value_enum: bool,
-
 }
 
 impl Craft {
@@ -96,8 +100,11 @@ impl Craft {
         self.version.clone()
     }
 
-    pub fn lib_path(&self) -> String {
-        slug(&self.lib_path.clone().unwrap_or(self.crate_name()), Some("_"))
+    pub fn lib_path(&self) -> Path {
+        self.at.join(slug(
+            &self.lib_path.clone().unwrap_or(self.crate_name()),
+            Some("_"),
+        ))
     }
 
     pub fn lib_options() -> Table {
@@ -143,12 +150,26 @@ impl Craft {
         entries
     }
 
+    pub fn git_entries(&self) -> Vec<Table> {
+        let mut entries = Vec::<Table>::new();
+        for name in vec![".gitignore"] {
+            let mut table = Table::new();
+            table.insert("name".to_string(), Value::String(name.to_string()));
+            table.insert(
+                "path".to_string(),
+                Value::String(self.at.join(name).to_string()),
+            );
+            entries.push(table);
+        }
+        entries
+    }
+
     pub fn lib_entry(&self) -> Option<Table> {
         let mut entry = Table::new();
         entry.insert("name".to_string(), Value::String(self.package_name()));
         entry.insert(
             "path".to_string(),
-            Value::String(Path::new(&self.lib_path()).join("lib.rs").to_string()),
+            Value::String(self.lib_path().join("lib.rs").to_string()),
         );
         Some(extend_table(&Craft::bin_options(), &entry))
     }
@@ -157,7 +178,7 @@ impl Craft {
         let mut entry = Table::new();
         entry.insert(
             "path".to_string(),
-            Value::String(Path::new(&self.lib_path()).join("errors.rs").to_string()),
+            Value::String(self.lib_path().join("errors.rs").to_string()),
         );
         Some(extend_table(&Craft::bin_options(), &entry))
     }
