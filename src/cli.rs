@@ -45,7 +45,7 @@ pub fn valid_manifest_path(val: &str) -> ::std::result::Result<Path, String> {
         path.clone()
     };
     let manifest_path = path.join("Cargo.toml");
-    if !manifest_path.is_dir() {
+    if manifest_path.exists() && !manifest_path.is_dir() {
         return Err(format!("{} already exists", &manifest_path));
     }
     Ok(path)
