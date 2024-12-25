@@ -6,27 +6,27 @@ use regex::Regex;
 use toml::{Table, Value};
 
 pub fn slug(text: &str, sep: Option<&str>) -> String {
-    let re = Regex::new("[^a-zA-Z0-9_-]+").unwrap();
+    let re = Regex::new("[^a-zA-Z0-9_-]").unwrap();
     re.replace_all(text, sep.unwrap_or("-").to_string())
         .to_string()
 }
 pub fn acceptable_crate_name(val: &str) -> ::std::result::Result<String, String> {
-    let re = Regex::new("[^a-zA-Z0-9_-]+").unwrap();
+    let re = Regex::new(r"^[a-z]+([-][a-z0-9]+|[a-z0-9]+)+$").unwrap();
     if re.is_match(val) {
+        Ok(val.to_string())
+    } else {
         Err(format!(
             "{:#?} does not appear to be a valid crate name",
             val
         ))
-    } else {
-        Ok(val.to_string())
     }
 }
 pub fn valid_package_name(val: &str) -> ::std::result::Result<String, String> {
-    let re = Regex::new("[^a-zA-Z0-9_]+").unwrap();
+    let re = Regex::new(r"^[a-z]+([_][a-z0-9]+|[a-z0-9]+)+$").unwrap();
     if re.is_match(val) {
-        Err(format!("{:#?} is not a valid package name", val))
-    } else {
         Ok(val.to_string())
+    } else {
+        Err(format!("{:#?} is not a valid package name", val))
     }
 }
 pub fn path_to_entry_path(entry: Option<Table>) -> Option<Path> {
@@ -49,6 +49,20 @@ pub fn valid_manifest_path(val: &str) -> ::std::result::Result<Path, String> {
         return Err(format!("{} already exists", &manifest_path));
     }
     Ok(path)
+}
+
+pub fn crate_name_from_path(path: impl Into<Path>) -> ::std::result::Result<String, String> {
+    let name = path.into().without_extension().name();
+    let crate_name = into_acceptable_crate_name(&name);
+    Ok(crate_name)
+}
+pub fn package_name_from_string_or_path(name: Option<String>, path: impl Into<Path>) -> ::std::result::Result<String, String> {
+    let name = match name {
+        Some(name) => name,
+        None => crate_name_from_path(path)?
+    };
+    let package_name = into_acceptable_package_name(&name);
+    Ok(package_name)
 }
 
 #[derive(Parser, Debug)]
@@ -83,17 +97,10 @@ pub struct Craft {
 
 impl Craft {
     pub fn crate_name(&self) -> String {
-        self.at.name()
+        crate_name_from_path(&self.at).unwrap()
     }
     pub fn package_name(&self) -> String {
-        slug(
-            &self
-                .package_name
-                .clone()
-                .or(Some(self.crate_name()))
-                .unwrap(),
-            Some("_"),
-        )
+        package_name_from_string_or_path(self.package_name.clone(), &self.at).unwrap()
     }
 
     pub fn version(&self) -> String {
@@ -193,4 +200,24 @@ impl Craft {
     pub fn manifest_path(&self) -> Path {
         self.path_to("Cargo.toml")
     }
+}
+
+pub fn into_acceptable_crate_name(val: &str) -> String {
+    into_acceptable_name(val, '-')
+}
+
+pub fn into_acceptable_package_name(val: &str) -> String {
+    into_acceptable_name(val, '_')
+}
+pub fn into_acceptable_name(val: &str, sep: char) -> String {
+    let val = val.to_lowercase();
+    let re = Regex::new(r"^[^a-z]+").unwrap();
+    let val = re.replace_all(&val, String::new()).to_string();
+    let re = Regex::new(r"[^a-z0-9]$").unwrap();
+    let val = re.replace_all(&val, String::new()).to_string();
+    let re = Regex::new(&format!(r"[{}]+", sep)).unwrap();
+    let val = re.replace_all(&val, String::from(sep)).to_string();
+    let re = Regex::new(&format!(r"[^a-zA-Z0-9{}]", sep)).unwrap();
+    let val = re.replace_all(&val, String::from(sep)).to_string();
+    val
 }

@@ -11,3 +11,12 @@ iocore = { path = "../gadgets/packages/iocore" }
 sanitation = { path = "../gadgets/packages/sanitation" }
 serde = { version = "1.0.213", features = ["derive"] }
 regex = "1.11.0"
+
+
+[lib]
+name = "cargo_craft"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cargo-craft"
+path = "src/main.rs"
