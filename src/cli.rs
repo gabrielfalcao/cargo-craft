@@ -38,14 +38,14 @@ pub fn path_to_entry_path(entry: Option<Table>) -> Option<Path> {
 
 pub fn valid_manifest_path(val: &str) -> ::std::result::Result<Path, String> {
     let val = acceptable_crate_name(val)?;
-    let path = Path::new(val).try_canonicalize();
+    let path = Path::new(val);
     let path = if path.name() == "Cargo.toml" && !path.is_dir() {
         path.parent().expect(&format!("parent of {}", &path))
     } else {
         path.clone()
     };
     let manifest_path = path.join("Cargo.toml");
-    if manifest_path.exists() && !manifest_path.is_dir() {
+    if manifest_path.try_canonicalize().exists() && !manifest_path.is_dir() {
         return Err(format!("{} already exists", &manifest_path));
     }
     Ok(path)
@@ -108,10 +108,7 @@ impl Craft {
     }
 
     pub fn lib_path(&self) -> Path {
-        self.at.join(slug(
-            &self.lib_path.clone().unwrap_or(self.crate_name()),
-            Some("_"),
-        ))
+        crate_name_from_path(&self.lib_path.clone().unwrap_or_else(||self.crate_name())).unwrap().into()
     }
 
     pub fn lib_options() -> Table {
@@ -164,7 +161,7 @@ impl Craft {
             table.insert("name".to_string(), Value::String(name.to_string()));
             table.insert(
                 "path".to_string(),
-                Value::String(self.at.join(name).to_string()),
+                Value::String(self.path().join(name).to_string()),
             );
             entries.push(table);
         }
