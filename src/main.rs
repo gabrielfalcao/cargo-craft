@@ -52,6 +52,9 @@ fn main() {
     if args.cli || args.bin_entries().len() > 0 {
         cargo_add("clap -F derive,env,string,unicode,wrap_help", args.path());
     }
+    for dep in args.deps() {
+        cargo_add(&dep, args.path());
+    }
 }
 
 fn cargo_add(dep: impl std::fmt::Display, current_dir: Path) {

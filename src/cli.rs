@@ -197,6 +197,9 @@ impl Craft {
     pub fn manifest_path(&self) -> Path {
         self.path_to("Cargo.toml")
     }
+    pub fn deps(&self) -> Vec<String> {
+        self.dep.to_vec()
+    }
 }
 
 pub fn into_acceptable_crate_name(val: &str) -> String {
