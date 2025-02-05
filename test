@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+cargo cbt
+cargo build --release
+
+
+tests() {
+    ./target/release/cargo-craft $@
+}
+
+
+
+tests -c tests

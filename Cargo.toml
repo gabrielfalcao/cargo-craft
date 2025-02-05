@@ -1,22 +1,22 @@
 [package]
 name = "cargo-craft"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.20", features = ["cargo", "derive", "env"] }
 tera = { version = "1.20.0", features = ["preserve_order"] }
 toml = { version = "0.8.19", features = ["preserve_order", "display"] }
-iocore = { path = "../gadgets/packages/iocore" }
-sanitation = { path = "../gadgets/packages/sanitation" }
+iocore = { path = "../iocore" }
+sanitation = { path = "../sanitation" }
 serde = { version = "1.0.213", features = ["derive"] }
 regex = "1.11.0"
 
 
 [lib]
 name = "cargo_craft"
-path = "src/lib.rs"
+path = "cargo-craft/lib.rs"
 
 [[bin]]
 name = "cargo-craft"
-path = "src/main.rs"
+path = "cargo-craft.rs"
