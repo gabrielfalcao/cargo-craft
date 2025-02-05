@@ -11,3 +11,6 @@ tests() {
 
 
 tests -c tests
+cd tests
+cargo cbt
+cargo run hello world
