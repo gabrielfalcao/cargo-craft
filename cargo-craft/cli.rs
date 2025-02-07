@@ -45,10 +45,14 @@ pub trait ClapExecuter: Parser {
         let args = std::env::args()
             .map(|arg| arg.to_string())
             .collect::<Vec<String>>();
-        if args[0] == "cargo" {
-            dbg!(args[0..].to_vec())
-        } else {
-            dbg!(args)
+        let execname = Path::new(&args[0]).name();
+        match execname.as_str() {
+            "cargo-craft" | "cargo" => {
+                args[1..].to_vec()
+            }
+            _ => {
+                args
+            }
         }
     }
 }

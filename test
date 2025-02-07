@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
 
-cargo cbt
-cargo build --release
-
-
 tests() {
     ./target/release/cargo-craft $@
 }
 
+cargo cbt
+cargo build --release
 
+tests tests
+(cd tests && cargo cbt)
+rm -rf tests
 
 tests -c tests
-cd tests
-cargo cbt
-cargo run hello world
+(cd tests && cargo cbt)
+(cd tests && cargo run hello world)
+rm -rf tests
+
+tests -cv tests
+(cd tests && cargo cbt)
+(cd tests && cargo run hello world)
+rm -rf tests
