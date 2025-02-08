@@ -220,6 +220,7 @@ impl ClapExecuter for Craft {
         for dep in args.deps() {
             cargo_add(&dep, args.path());
         }
+        shell_command(format!("rustfmt */*.rs"), args.path());
         Ok(())
     }
 }
