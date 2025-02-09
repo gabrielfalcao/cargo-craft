@@ -1,3 +1,4 @@
+use crate::errors::Result;
 use crate::helpers::*;
 use crate::shell::*;
 use crate::templates::{render, render_cli};
@@ -35,8 +36,8 @@ pub struct Craft {
     pub value_enum: bool,
 }
 pub trait ClapExecuter: Parser {
-    fn run(args: &Self) -> Result<(), String>;
-    fn main() -> Result<(), String> {
+    fn run(args: &Self) -> Result<()>;
+    fn main() -> Result<()> {
         let args = Self::parse_from(Self::args());
         Self::run(&args)?;
         Ok(())
@@ -47,12 +48,8 @@ pub trait ClapExecuter: Parser {
             .collect::<Vec<String>>();
         let execname = Path::new(&args[0]).name();
         match execname.as_str() {
-            "cargo-craft" | "cargo" => {
-                args[1..].to_vec()
-            }
-            _ => {
-                args
-            }
+            "cargo-craft" | "cargo" => args[1..].to_vec(),
+            _ => args,
         }
     }
 }
@@ -165,33 +162,30 @@ impl Craft {
     pub fn deps(&self) -> Vec<String> {
         self.dep.to_vec()
     }
-}
-
-impl ClapExecuter for Craft {
-    fn run(args: &Craft) -> Result<(), String> {
-        let manifest_path = args.manifest_path();
-        let manifest_string = render(&args, "Cargo.toml").unwrap();
+    pub fn go(&self) -> Result<()> {
+        let manifest_path = self.manifest_path();
+        let manifest_string = render(&self, "Cargo.toml").unwrap();
         manifest_path.write(&manifest_string.as_bytes()).unwrap();
         println!("wrote {}", manifest_path);
 
         let mut ttargets = vec![
-            (render(&args, "lib.rs"), vec![args.lib_entry()]),
-            (render(&args, "errors.rs"), vec![args.errors_entry()]),
+            (render(&self, "lib.rs"), vec![self.lib_entry()]),
+            (render(&self, "errors.rs"), vec![self.errors_entry()]),
             (
-                render_cli(&args),
-                args.bin_entries()
+                render_cli(&self),
+                self.bin_entries()
                     .iter()
                     .map(|entry| Some(entry.clone()))
                     .collect::<Vec<Option<Table>>>(),
             ),
         ];
-        ttargets.extend(args.git_entries().iter().map(|entry| {
+        ttargets.extend(self.git_entries().iter().map(|entry| {
             let name = entry
                 .get("name")
                 .expect("entry name")
                 .as_str()
                 .expect("str");
-            (render(&args, name), vec![Some(entry.clone())])
+            (render(&self, name), vec![Some(entry.clone())])
         }));
         for (template, target) in ttargets {
             for target in target
@@ -202,7 +196,7 @@ impl ClapExecuter for Craft {
                 .map(|path| path.unwrap())
                 .collect::<Vec<Path>>()
             {
-                match args
+                match self
                     .path_to(target)
                     .write(&template.clone().unwrap().as_bytes())
                 {
@@ -213,17 +207,34 @@ impl ClapExecuter for Craft {
                 }
             }
         }
-        cargo_add("serde -F derive", args.path());
-        if args.cli || args.bin_entries().len() > 0 {
-            cargo_add("clap -F derive,env,string,unicode,wrap_help", args.path());
+        shell_command(format!("tput clear"), self.path())?;
+        cargo_add("serde -F derive", self.path())?;
+        if self.cli || self.bin_entries().len() > 0 {
+            cargo_add("clap -F derive,env,string,unicode,wrap_help", self.path())?;
         }
-        for dep in args.deps() {
-            cargo_add(&dep, args.path());
+        for dep in self.deps() {
+            cargo_add(&dep, self.path())?;
         }
-        shell_command(format!("rustfmt */*.rs"), args.path());
+
+        shell_command(format!("rustfmt */*.rs"), self.path())?;
         Ok(())
     }
 }
-fn cargo_add(dep: impl std::fmt::Display, current_dir: Path) {
-    shell_command(format!("cargo-unix add {}", dep), current_dir);
+
+impl ClapExecuter for Craft {
+    fn run(args: &Craft) -> Result<()> {
+        match args.go() {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                eprintln!("error {}", e);
+                eprintln!("rolling back {}", args.path());
+                args.path().delete()?;
+                Ok(())
+            }
+        }
+    }
+}
+fn cargo_add(dep: impl std::fmt::Display, current_dir: Path) -> Result<()> {
+    shell_command(format!("cargo-unix add {}", dep), current_dir)?;
+    Ok(())
 }
