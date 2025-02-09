@@ -223,12 +223,15 @@ impl Craft {
 
 impl ClapExecuter for Craft {
     fn run(args: &Craft) -> Result<()> {
+        let could_rollback = !args.path().try_canonicalize().exists();
         match args.go() {
             Ok(()) => Ok(()),
             Err(e) => {
                 eprintln!("error {}", e);
-                eprintln!("rolling back {}", args.path());
-                args.path().delete()?;
+                if could_rollback {
+                    eprintln!("rolling back {}", args.path());
+                    args.path().delete()?;
+                }
                 Ok(())
             }
         }
