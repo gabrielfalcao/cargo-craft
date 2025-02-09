@@ -202,6 +202,7 @@ impl Craft {
                 {
                     Ok(path) => {
                         println!("wrote {}", path);
+                        shell_command(format!("rustfmt {}", path.relative_to_cwd()), Path::cwd())?;
                     }
                     Err(err) => panic!("{}", err),
                 }
@@ -215,8 +216,6 @@ impl Craft {
         for dep in self.deps() {
             cargo_add(&dep, self.path())?;
         }
-
-        shell_command(format!("rustfmt */*.rs"), self.path())?;
         Ok(())
     }
 }
