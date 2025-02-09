@@ -2,8 +2,10 @@ use crate::Result;
 use iocore::Path;
 use std::process::{Command, Stdio};
 
-pub fn shell_command(command: String, current_dir: Path) -> Result<i32> {
-    eprintln!("running {:#?} in {}", &command, &current_dir);
+pub fn shell_command(command: String, current_dir: Path, verbose: bool) -> Result<i32> {
+    if verbose {
+        eprintln!("{}", &command);
+    }
     let args = command
         .split(" ")
         .map(|arg| arg.trim().to_string())

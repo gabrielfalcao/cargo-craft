@@ -32,8 +32,11 @@ pub struct Craft {
     #[arg(long, default_value = "cli")]
     bin_path: String,
 
-    #[arg(short, long)]
+    #[arg(short = 'V', long)]
     pub value_enum: bool,
+
+    #[arg(short, long)]
+    pub verbose: bool,
 }
 pub trait ClapExecuter: Parser {
     fn run(args: &Self) -> Result<()>;
@@ -202,19 +205,19 @@ impl Craft {
                 {
                     Ok(path) => {
                         println!("wrote {}", path);
-                        shell_command(format!("rustfmt {}", path.relative_to_cwd()), Path::cwd())?;
+                        shell_command(format!("rustfmt {}", path.relative_to_cwd()), Path::cwd(), self.verbose)?;
                     }
                     Err(err) => panic!("{}", err),
                 }
             }
         }
-        shell_command(format!("tput clear"), self.path())?;
-        cargo_add("serde -F derive", self.path())?;
+        shell_command(format!("tput clear"), self.path(), self.verbose)?;
+        cargo_add("serde -F derive", self.path(), self.verbose)?;
         if self.cli || self.bin_entries().len() > 0 {
-            cargo_add("clap -F derive,env,string,unicode,wrap_help", self.path())?;
+            cargo_add("clap -F derive,env,string,unicode,wrap_help", self.path(), self.verbose)?;
         }
         for dep in self.deps() {
-            cargo_add(&dep, self.path())?;
+            cargo_add(&dep, self.path(), self.verbose)?;
         }
         Ok(())
     }
@@ -236,7 +239,8 @@ impl ClapExecuter for Craft {
         }
     }
 }
-fn cargo_add(dep: impl std::fmt::Display, current_dir: Path) -> Result<()> {
-    shell_command(format!("cargo-unix add {}", dep), current_dir)?;
+
+pub fn cargo_add(dep: impl std::fmt::Display, current_dir: Path, verbose: bool) -> Result<()> {
+    shell_command(format!("cargo-unix add {}", dep), current_dir, verbose)?;
     Ok(())
 }
