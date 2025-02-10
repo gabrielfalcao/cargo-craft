@@ -1,13 +1,10 @@
-use serde::{Serializer, Serialize};
 use serde::ser::SerializeStruct;
+use serde::{Serialize, Serializer};
 use std::fmt::Display;
-use std::num::ParseIntError;
-use std::string::FromUtf8Error;
 
 #[derive(Debug, Clone)]
 pub enum Error {
-    InvalidUtf8(String),
-    ParseIntError(String),
+    IOError(String),
 }
 
 impl Serialize for Error {
@@ -28,8 +25,7 @@ impl Display for Error {
             "{}{}",
             self.variant(),
             match self {
-                Self::InvalidUtf8(s) => format!("{}", s),
-                Self::ParseIntError(s) => format!("{}", s),
+                Self::IOError(s) => format!("{}", s),
             }
         )
     }
@@ -38,22 +34,21 @@ impl Display for Error {
 impl Error {
     pub fn variant(&self) -> String {
         match self {
-            Error::InvalidUtf8(_) => "InvalidUtf8",
-            Error::ParseIntError(_) => "ParseIntError",
+            Error::IOError(_) => "IOError",
         }
         .to_string()
     }
 }
 
 impl std::error::Error for Error {}
-impl From<ParseIntError> for Error {
-    fn from(e: ParseIntError) -> Self {
-        Error::ParseIntError(format!("{}", e))
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Self {
+        Error::IOError(format!("{}", e))
     }
 }
-impl From<FromUtf8Error> for Error {
-    fn from(e: FromUtf8Error) -> Self {
-        Error::InvalidUtf8(format!("{}", e))
+impl From<iocore::Exception> for Error {
+    fn from(e: iocore::Exception) -> Self {
+        Error::IOError(format!("{}", e))
     }
 }
 pub type Result<T> = std::result::Result<T, Error>;

@@ -190,6 +190,7 @@ impl Craft {
                 .expect("str");
             (render(&self, name), vec![Some(entry.clone())])
         }));
+        let mut written_paths = Vec::<Path>::new();
         for (template, target) in ttargets {
             for target in target
                 .iter()
@@ -205,16 +206,30 @@ impl Craft {
                 {
                     Ok(path) => {
                         println!("wrote {}", path);
-                        shell_command(format!("rustfmt {}", path.relative_to_cwd()), Path::cwd(), self.verbose)?;
+                        written_paths.push(path);
                     }
                     Err(err) => panic!("{}", err),
                 }
             }
         }
-        shell_command(format!("tput clear"), self.path(), self.verbose)?;
+        for target in written_paths {
+            if target.extension().unwrap_or_default().ends_with("rs") {
+                shell_command(
+                    format!("rustfmt {}", target.relative_to_cwd()),
+                    Path::cwd(),
+                    self.verbose,
+                )?;
+
+            }
+        }
+        // shell_command(format!("tput clear"), self.path(), self.verbose)?;
         cargo_add("serde -F derive", self.path(), self.verbose)?;
         if self.cli || self.bin_entries().len() > 0 {
-            cargo_add("clap -F derive,env,string,unicode,wrap_help", self.path(), self.verbose)?;
+            cargo_add(
+                "clap -F derive,env,string,unicode,wrap_help",
+                self.path(),
+                self.verbose,
+            )?;
         }
         for dep in self.deps() {
             cargo_add(&dep, self.path(), self.verbose)?;
