@@ -29,7 +29,7 @@ pub struct Craft {
     #[arg(long)]
     lib_path: Option<String>,
 
-    #[arg(long, default_value = "cli")]
+    #[arg(long, default_value = ".")]
     bin_path: String,
 
     #[arg(short = 'V', long)]
@@ -49,11 +49,15 @@ pub trait ClapExecuter: Parser {
         let args = std::env::args()
             .map(|arg| arg.to_string())
             .collect::<Vec<String>>();
+        dbg!(&args);
         let execname = Path::new(&args[0]).name();
-        match execname.as_str() {
-            "cargo-craft" | "cargo" => args[1..].to_vec(),
-            _ => args,
-        }
+        let args = if execname.ends_with("cargo") || execname.ends_with("cargo-craft") {
+            args[1..].to_vec()
+        } else {
+            args.to_vec()
+        };
+        dbg!(&args);
+        args
     }
 }
 
@@ -121,12 +125,16 @@ impl Craft {
 
     pub fn git_entries(&self) -> Vec<Table> {
         let mut entries = Vec::<Table>::new();
-        for name in vec![".gitignore"] {
+        for name in vec![".gitignore", ".rustfmt.toml"] {
             let mut table = Table::new();
             table.insert("name".to_string(), Value::String(name.to_string()));
             table.insert(
                 "path".to_string(),
-                Value::String(self.path().join(name).to_string()),
+                Value::String(
+                    Path::new(&self.bin_path)
+                        .join(&name)
+                        .to_string(),
+                ),
             );
             entries.push(table);
         }
@@ -155,8 +163,8 @@ impl Craft {
     pub fn path(&self) -> Path {
         self.at.clone()
     }
-    pub fn path_to(&self, to: impl Into<String>) -> Path {
-        self.path().join(to)
+    pub fn path_to(&self, to: impl std::fmt::Display) -> Path {
+        self.path().join(to.to_string())
     }
 
     pub fn manifest_path(&self) -> Path {
@@ -182,15 +190,32 @@ impl Craft {
                     .collect::<Vec<Option<Table>>>(),
             ),
         ];
-        ttargets.extend(self.git_entries().iter().map(|entry| {
+        let git_entries = self.git_entries().into_iter().map(|entry| {
             let name = entry
                 .get("name")
                 .expect("entry name")
                 .as_str()
                 .expect("str");
             (render(&self, name), vec![Some(entry.clone())])
-        }));
+        });
+        ttargets.extend(git_entries);
+        ttargets = ttargets
+            .iter()
+            .filter(|(path, _)| path.is_some())
+            .map(|(path, entries)| (path.clone(), entries.clone()))
+            .collect::<Vec<(Option<String>, Vec<Option<Table>>)>>();
         let mut written_paths = Vec::<Path>::new();
+        // written_paths.push(
+        //     self.path_to("craft.toml").write(
+        //         toml::to_string_pretty(&ttargets)
+        //             .expect(&format!(
+        //                 "write to {}: {:#?}",
+        //                 self.path_to("craft.toml"),
+        //                 &ttargets
+        //             ))
+        //             .as_bytes(),
+        //     )?,
+        // ); // Error: toml null
         for (template, target) in ttargets {
             for target in target
                 .iter()
@@ -219,11 +244,11 @@ impl Craft {
                     Path::cwd(),
                     self.verbose,
                 )?;
-
             }
         }
         // shell_command(format!("tput clear"), self.path(), self.verbose)?;
         cargo_add("serde -F derive", self.path(), self.verbose)?;
+        cargo_add("iocore", self.path(), self.verbose)?;
         if self.cli || self.bin_entries().len() > 0 {
             cargo_add(
                 "clap -F derive,env,string,unicode,wrap_help",

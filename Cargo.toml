@@ -1,14 +1,19 @@
+cargo-features = ["per-package-target"]
+
 [package]
 name = "cargo-craft"
 version = "0.0.1"
-edition = "2021"
+edition = "2024"
+
+[package.metadata]
+cargo-args = ["-Zmtime-on-use", "-Zavoid-dev-deps", "-Zcustom_mir"]
 
 [dependencies]
 clap = { version = "4.5.20", features = ["cargo", "derive", "env"] }
 tera = { version = "1.20.0", features = ["preserve_order"] }
 toml = { version = "0.8.19", features = ["preserve_order", "display"] }
 iocore = { path = "../iocore" }
-sanitation = { path = "../sanitation" }
+sanitation = { version = "1.0.0" }
 cargo-unix = { path = "../cargo-unix" }
 serde = { version = "1.0.213", features = ["derive"] }
 regex = "1.11.0"

@@ -459,7 +459,7 @@ dependencies = [
 
 [[package]]
 name = "iocore"
-version = "0.1000.0"
+version = "0.1001.0"
 dependencies = [
  "chrono",
  "filetime",
@@ -468,7 +468,7 @@ dependencies = [
  "regex",
  "sanitation",
  "serde",
- "thread-group",
+ "thread-groups",
 ]
 
 [[package]]
@@ -777,7 +777,9 @@ dependencies = [
 
 [[package]]
 name = "sanitation"
-version = "0.1.0"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da95ea7c498e403c6c2f690ae2b315a7021785011adf5ee15ce8453b1a11fb84"
 
 [[package]]
 name = "serde"
@@ -924,8 +926,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "thread-group"
-version = "0.1.0"
+name = "thread-groups"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d6be77ff39e74e00755ce61678a14840c6bcf253187ef0c310ccdf361794c53"
 
 [[package]]
 name = "toml"

@@ -1,22 +1,44 @@
 #!/usr/bin/env bash
+set -ex
 
 tests() {
-    ./target/release/cargo-craft $@
+    set -x
+    ./target/debug/cargo-craft $*
+    set +x
 }
 
-cargo cbt
-cargo build --release
+cargo cbt -q
+cargo build
 
-tests tests
-(cd tests && cargo cbt)
-rm -rf tests
+rm -rf tests-cli
+tests -c tests-cli
+(cd tests-cli && cargo cbt -q)
+test -f tests-cli/Cargo.toml
+test -f tests-cli/.gitignore
+test -f tests-cli/.rustfmt.toml
+test -f tests-cli/tests.rs
+(cd tests-cli && cargo run hello world)
+rm -rf tests-cli
 
-tests -c tests
-(cd tests && cargo cbt)
-(cd tests && cargo run hello world)
-rm -rf tests
+rm -rf tests-no-cli
+tests tests-no-cli
+(cd tests-no-cli && cargo cbt -q)
+test -f tests-no-cli/Cargo.toml
+test -f tests-no-cli/.gitignore
+test -f tests-no-cli/.rustfmt.toml
+if [ -f tests-no-cli/tests-no-cli-cli.rs ]; then
+    1>&2 echo "command-line file should not have been rendered without providing '-c' option"
+    exit 1
+fi
+rm -rf tests-no-cli
 
-tests -cv tests
-(cd tests && cargo cbt)
-(cd tests && cargo run hello world)
-rm -rf tests
+
+rm -rf tests-cli-value-parser
+tests -cv tests-cli-value-parser
+(cd tests-cli-value-parser && cargo cbt -q)
+test -f tests-cli-value-parser/Cargo.toml
+test -f tests-cli-value-parser/.gitignore
+test -f tests-cli-value-parser/.rustfmt.toml
+test -f tests-cli-value-parser/tests-cli-value-parser-cli.rs
+(cd tests-cli-value-parser && cargo run hello world)
+rm -rf tests-cli-value-parser

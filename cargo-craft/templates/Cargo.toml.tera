@@ -1,24 +1,21 @@
-cargo-features = ["per-package-target", "edition2024"]
+cargo-features = ["per-package-target"]
 
 [package]
 name = "{{ crate_name }}"
 version = "{{ crate_version }}"
-edition = "2021"
-default-target = "aarch64-apple-darwin"
+edition = "2024"
 autoexamples = false
 autobenches = false
 
 [package.metadata]
-cargo-args = ["-Zmtime-on-use", "-Zavoid-dev-deps"]
-targets = [
-    "aarch64-apple-darwin",
-]
+cargo-args = ["-Zmtime-on-use", "-Zavoid-dev-deps", "-Zcustom_mir"]
 
 {% if craft_lib %}
 [lib]
 name = "{{ crate_lib["name"] }}"
 path = "{{ crate_lib["path"] }}"
-{% if not craft_cli %}crate-type = ["dylib"]  #["lib", "dylib", "cdylib", "staticlib"] # https://doc.rust-lang.org/reference/linkage.html{% endif %}
+{% if not craft_cli %}# https://doc.rust-lang.org/reference/linkage.html
+# crate-type = ["dylib"]  # #["lib", "dylib", "cdylib", "staticlib"]{% endif %}
 doctest = false
 bench = false
 {% endif %}{% if craft_cli %}

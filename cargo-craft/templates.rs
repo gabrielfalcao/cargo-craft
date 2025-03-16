@@ -13,6 +13,8 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
         .unwrap();
     tera.add_raw_template(".gitignore", include_str!("./templates/gitignore.tera"))
         .unwrap();
+    tera.add_raw_template(".rustfmt.toml", include_str!("./templates/rustfmt.toml.tera"))
+        .unwrap();
 
     let mut context = Context::new();
     context.insert("crate_name", &craft.crate_name());

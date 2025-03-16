@@ -6,6 +6,7 @@ use std::fmt::Display;
 pub enum Error {
     ShellCommandError(String),
     IOError(String),
+    SerializationError(String),
 }
 
 impl Serialize for Error {
@@ -23,11 +24,12 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "{}{}",
+            "{}: {}",
             self.variant(),
             match self {
                 Self::ShellCommandError(s) => format!("{}", s),
                 Self::IOError(s) => format!("{}", s),
+                Self::SerializationError(s) => format!("{}", s),
             }
         )
     }
@@ -38,6 +40,7 @@ impl Error {
         match self {
             Error::ShellCommandError(_) => "ShellCommandError",
             Error::IOError(_) => "IOError",
+            Error::SerializationError(_) => "SerializationError",
         }
         .to_string()
     }
@@ -49,9 +52,14 @@ impl From<std::io::Error> for Error {
         Error::IOError(format!("{}", e))
     }
 }
-impl From<iocore::Exception> for Error {
-    fn from(e: iocore::Exception) -> Self {
+impl From<iocore::Error> for Error {
+    fn from(e: iocore::Error) -> Self {
         Error::IOError(format!("{}", e))
     }
 }
+// impl From<toml::ser::Error> for Error {
+//     fn from(e: toml::ser::Error) -> Self {
+//         Error::SerializationError(format!("{}", e))
+//     }
+// }
 pub type Result<T> = std::result::Result<T, Error>;
