@@ -49,14 +49,12 @@ pub trait ClapExecuter: Parser {
         let args = std::env::args()
             .map(|arg| arg.to_string())
             .collect::<Vec<String>>();
-        dbg!(&args);
         let execname = Path::new(&args[0]).name();
         let args = if execname.ends_with("cargo") || execname.ends_with("cargo-craft") {
             args[1..].to_vec()
         } else {
             args.to_vec()
         };
-        dbg!(&args);
         args
     }
 }
@@ -199,23 +197,12 @@ impl Craft {
             (render(&self, name), vec![Some(entry.clone())])
         });
         ttargets.extend(git_entries);
-        ttargets = ttargets
+        let ttargets = ttargets
             .iter()
             .filter(|(path, _)| path.is_some())
-            .map(|(path, entries)| (path.clone(), entries.clone()))
-            .collect::<Vec<(Option<String>, Vec<Option<Table>>)>>();
+            .map(|(path, entries)| (path.clone().unwrap(), entries.clone()))
+            .collect::<Vec<(String, Vec<Option<Table>>)>>();
         let mut written_paths = Vec::<Path>::new();
-        // written_paths.push(
-        //     self.path_to("craft.toml").write(
-        //         toml::to_string_pretty(&ttargets)
-        //             .expect(&format!(
-        //                 "write to {}: {:#?}",
-        //                 self.path_to("craft.toml"),
-        //                 &ttargets
-        //             ))
-        //             .as_bytes(),
-        //     )?,
-        // ); // Error: toml null
         for (template, target) in ttargets {
             for target in target
                 .iter()
@@ -227,7 +214,7 @@ impl Craft {
             {
                 match self
                     .path_to(target)
-                    .write(&template.clone().unwrap().as_bytes())
+                    .write(&template.as_bytes())
                 {
                     Ok(path) => {
                         println!("wrote {}", path);
