@@ -46,8 +46,8 @@ impl From<std::io::Error> for Error {
         Error::IOError(format!("{}", e))
     }
 }
-impl From<iocore::Exception> for Error {
-    fn from(e: iocore::Exception) -> Self {
+impl From<iocore::Error> for Error {
+    fn from(e: iocore::Error) -> Self {
         Error::IOError(format!("{}", e))
     }
 }
