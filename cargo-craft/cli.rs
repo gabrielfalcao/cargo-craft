@@ -68,6 +68,10 @@ impl Craft {
         package_name_from_string_or_path(self.package_name.clone(), &self.at).unwrap()
     }
 
+    pub fn struct_name(&self) -> String {
+        struct_name_from_package_name(&self.package_name())
+    }
+
     pub fn version(&self) -> String {
         self.version.clone()
     }
@@ -123,37 +127,24 @@ impl Craft {
 
     pub fn git_entries(&self) -> Vec<Table> {
         let mut entries = Vec::<Table>::new();
-        for name in vec![".gitignore", ".rustfmt.toml"] {
+        for name in vec![".gitignore", ".rustfmt.toml", "rust-toolchain.toml"] {
             let mut table = Table::new();
             table.insert("name".to_string(), Value::String(name.to_string()));
             table.insert(
                 "path".to_string(),
-                Value::String(
-                    Path::new(&self.bin_path)
-                        .join(&name)
-                        .to_string(),
-                ),
+                Value::String(Path::new(&self.bin_path).join(&name).to_string()),
             );
             entries.push(table);
         }
         entries
     }
 
-    pub fn lib_entry(&self) -> Option<Table> {
+    pub fn lib_entry(&self, path: impl std::fmt::Display) -> Option<Table> {
         let mut entry = Table::new();
         entry.insert("name".to_string(), Value::String(self.package_name()));
         entry.insert(
             "path".to_string(),
-            Value::String(self.lib_path().join("lib.rs").to_string()),
-        );
-        Some(extend_table(&Craft::bin_options(), &entry))
-    }
-
-    pub fn errors_entry(&self) -> Option<Table> {
-        let mut entry = Table::new();
-        entry.insert(
-            "path".to_string(),
-            Value::String(self.lib_path().join("errors.rs").to_string()),
+            Value::String(self.lib_path().join(path).to_string()),
         );
         Some(extend_table(&Craft::bin_options(), &entry))
     }
@@ -178,8 +169,9 @@ impl Craft {
         println!("wrote {}", manifest_path);
 
         let mut ttargets = vec![
-            (render(&self, "lib.rs"), vec![self.lib_entry()]),
-            (render(&self, "errors.rs"), vec![self.errors_entry()]),
+            (render(&self, "lib.rs"), vec![self.lib_entry("lib.rs")]),
+            (render(&self, "{{package_name}}.rs"), vec![self.lib_entry(format!("{}.rs", self.package_name()))]),
+            (render(&self, "errors.rs"), vec![self.lib_entry("errors.rs")]),
             (
                 render_cli(&self),
                 self.bin_entries()
@@ -212,10 +204,7 @@ impl Craft {
                 .map(|path| path.unwrap())
                 .collect::<Vec<Path>>()
             {
-                match self
-                    .path_to(target)
-                    .write(&template.as_bytes())
-                {
+                match self.path_to(target).write(&template.as_bytes()) {
                     Ok(path) => {
                         println!("wrote {}", path);
                         written_paths.push(path);
@@ -270,4 +259,24 @@ impl ClapExecuter for Craft {
 pub fn cargo_add(dep: impl std::fmt::Display, current_dir: Path, verbose: bool) -> Result<()> {
     shell_command(format!("cargo-unix add {}", dep), current_dir, verbose)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod test_craft {
+    use crate::Craft;
+    use clap::Parser;
+    use iocore::{args_from_string, Path};
+
+    fn craft_from_args(args: &str) -> Craft {
+        Craft::parse_from(&args_from_string(args))
+    }
+    #[test]
+    fn test_craft_context() {
+        let craft = craft_from_args("craft test-crate-name");
+        assert_eq!(craft.crate_name(), "test-crate-name");
+        assert_eq!(craft.package_name(), "test_crate_name");
+        assert_eq!(craft.struct_name(), "TestCrateName");
+        assert_eq!(craft.version(), "0.0.1");
+        assert_eq!(craft.lib_path(), Path::raw("test-crate-name"));
+    }
 }

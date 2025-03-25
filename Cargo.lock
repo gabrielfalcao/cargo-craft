@@ -459,7 +459,7 @@ dependencies = [
 
 [[package]]
 name = "iocore"
-version = "0.1001.0"
+version = "0.1011.0"
 dependencies = [
  "chrono",
  "filetime",
@@ -469,6 +469,7 @@ dependencies = [
  "sanitation",
  "serde",
  "thread-groups",
+ "trilobyte",
 ]
 
 [[package]]
@@ -777,24 +778,24 @@ dependencies = [
 
 [[package]]
 name = "sanitation"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da95ea7c498e403c6c2f690ae2b315a7021785011adf5ee15ce8453b1a11fb84"
+checksum = "c7c07d60b69a4c8c2a4f14f704f00cd061bb5e947e62b98787fd39e03dfac13f"
 
 [[package]]
 name = "serde"
-version = "1.0.215"
+version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6513c1ad0b11a9376da888e3e0baa0077f1aed55c17f50e7b2397136129fb88f"
+checksum = "5f0e2c6ed6606019b4e29e69dbaba95b11854410e5347d525002456dbbb786b6"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.215"
+version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad1e866f866923f252f05c889987993144fb74e722403468a4ebd70c3cd756c0"
+checksum = "5b0276cf7f2c73365f7157c8123c21cd9a50fbbd844757af28ca1f5925fc2a00"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -927,9 +928,9 @@ dependencies = [
 
 [[package]]
 name = "thread-groups"
-version = "0.0.3"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d6be77ff39e74e00755ce61678a14840c6bcf253187ef0c310ccdf361794c53"
+checksum = "48b34205341bd8d082c189a823e72be41480c2ca94b3d5d5c84dca8a94921180"
 
 [[package]]
 name = "toml"
@@ -965,6 +966,12 @@ dependencies = [
  "toml_datetime",
  "winnow",
 ]
+
+[[package]]
+name = "trilobyte"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aba5dcb0f351a283a3edc727371293fde00a78625563627c7ff1fbd6fe2520e0"
 
 [[package]]
 name = "typenum"

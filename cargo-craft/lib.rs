@@ -1,8 +1,8 @@
-pub mod cli;
-pub mod helpers;
-pub mod templates;
-pub mod shell;
-pub mod errors;
+pub(crate) mod cli;
+pub(crate) mod helpers;
+pub(crate) mod templates;
+pub(crate) mod shell;
+pub(crate) mod errors;
 
 pub use cli::*;
 pub use helpers::*;

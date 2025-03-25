@@ -1,5 +1,3 @@
-cargo-features = ["per-package-target"]
-
 [package]
 name = "{{ crate_name }}"
 version = "{{ crate_version }}"
