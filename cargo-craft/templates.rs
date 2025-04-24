@@ -9,18 +9,27 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
         .unwrap();
     tera.add_raw_template("cli.rs", include_str!("./templates/lib_cli.rs.tera"))
         .unwrap();
-    tera.add_raw_template("{{package_name}}.rs", include_str!("./templates/{{package_name}}.rs.tera"))
-        .unwrap();
+    tera.add_raw_template(
+        "{{package_name}}.rs",
+        include_str!("./templates/{{package_name}}.rs.tera"),
+    )
+    .unwrap();
     tera.add_raw_template("cli", include_str!("./templates/cli.rs.tera"))
         .unwrap();
     tera.add_raw_template("Cargo.toml", include_str!("./templates/Cargo.toml.tera"))
         .unwrap();
     tera.add_raw_template(".gitignore", include_str!("./templates/gitignore.tera"))
         .unwrap();
-    tera.add_raw_template(".rustfmt.toml", include_str!("./templates/rustfmt.toml.tera"))
-        .unwrap();
-    tera.add_raw_template("rust-toolchain.toml", include_str!("./templates/rust-toolchain.toml.tera"))
-        .unwrap();
+    tera.add_raw_template(
+        ".rustfmt.toml",
+        include_str!("./templates/rustfmt.toml.tera"),
+    )
+    .unwrap();
+    tera.add_raw_template(
+        "rust-toolchain.toml",
+        include_str!("./templates/rust-toolchain.toml.tera"),
+    )
+    .unwrap();
     tera.add_raw_template("README.md", include_str!("./templates/README.md.tera"))
         .unwrap();
 
@@ -33,8 +42,8 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
     context.insert("craft_cli", &craft.cli);
     context.insert("crate_binaries", &craft.bin_entries());
     context.insert("crate_lib", &craft.lib_entry("lib.rs"));
-    context.insert("craft_value_enum", &craft.value_enum);
-    context.insert("craft_subcommands", &craft.subcommands);
+    context.insert("craft_value_enum", &(craft.cli && craft.value_enum));
+    context.insert("craft_subcommands", &(craft.cli && craft.subcommands));
     (tera, context)
 }
 pub fn render(craft: &Craft, template_name: &str) -> Option<String> {

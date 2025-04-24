@@ -145,10 +145,6 @@ impl ValueEnum for Std {
     }
 {% endif %}
 
-{% if craft_lib %}
-fn main() -> Result<()> {
-{% else %}
 fn main()  {
-{% endif %}
     Cli::main()
 }

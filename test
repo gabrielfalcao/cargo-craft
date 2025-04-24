@@ -105,3 +105,12 @@ if [ -f tests-no-cli/tests-no-cli-cli.rs ]; then
     exit 1
 fi
 exit_on_fail tests-no-cli
+
+
+cargo_craft -c cargo-cli
+cbt cargo-cli
+assert_file_exists cargo-cli/Cargo.toml
+assert_file_exists cargo-cli/.gitignore
+assert_file_exists cargo-cli/.rustfmt.toml
+assert_file_exists cargo-cli/cargo-cli.rs
+exit_on_fail cargo-cli "hello world"
