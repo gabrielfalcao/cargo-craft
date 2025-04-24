@@ -11,6 +11,16 @@ cargo cbt -q
 cargo build
 
 rm -rf tests-cli
+tests -sc tests-cli
+(cd tests-cli && cargo cbt -q)
+test -f tests-cli/Cargo.toml
+test -f tests-cli/.gitignore
+test -f tests-cli/.rustfmt.toml
+test -f tests-cli/tests.rs
+(cd tests-cli && cargo run hello world)
+rm -rf tests-cli
+
+rm -rf tests-cli
 tests -c tests-cli
 (cd tests-cli && cargo cbt -q)
 test -f tests-cli/Cargo.toml

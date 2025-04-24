@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 {% if craft_lib %}
 use {{ package_name }}::{Result, Error};
-use {{ package_name }}::{ParserDispatcher, SubcommandDispatcher, ArgsDispatcher};
+use {{ package_name }}::cli::{ParserDispatcher, SubcommandDispatcher, ArgsDispatcher};
 {% endif %}
 {% if craft_value_enum %}
 use clap::builder::PossibleValue;
@@ -12,12 +12,36 @@ use clap::ValueEnum;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = "{{ crate_name }}{% if craft_cli %} command-line{% else %}{% endif %}")]
 pub struct Cli {
+    {% if craft_subcommands %}
     #[command(subcommand)]
     pub command: Command,
+    {% else %}
+    #[arg()]
+    text: String,
+    {% if craft_value_enum %}
+    #[arg(short, long, default_value = "stdout")]
+    output: Output,
+    {% endif %}
+    {% endif %}
 }
 impl ParserDispatcher<Error> for Cli {
     fn dispatch(&self) -> Result<()> {
+        {% if craft_subcommands %}
         self.command.dispatch()?;
+        {% else %}
+            {% if craft_value_enum %}
+            match &self.output {
+                Output::Stdout => {
+                    println!("{}", &self.text);
+                },
+                Output::Stderr => {
+                    eprintln!("{}", &self.text);
+                },
+            }
+            {% else %}
+            println!("{}", &self.text);
+            {% endif %}
+        {% endif %}
         Ok(())
     }
 }
@@ -71,46 +95,48 @@ impl ValueEnum for Output {
 {% endif %}
 
 
-#[derive(Subcommand, Debug)]
-pub enum Command {
-    Hello(HelloOpt),
-}
-impl SubcommandDispatcher<Error> for Command {
-    fn dispatch(&self) -> Result<()> {
-        match self {
-            Command::Hello(op) => op.dispatch()?,
-        }
-        Ok(())
+{% if craft_subcommands %}
+    #[derive(Subcommand, Debug)]
+    pub enum Command {
+        Hello(HelloOpt),
     }
-}
+    impl SubcommandDispatcher<Error> for Command {
+        fn dispatch(&self) -> Result<()> {
+            match self {
+                Command::Hello(op) => op.dispatch()?,
+            }
+            Ok(())
+        }
+    }
 
-#[derive(Parser, Debug)]
-pub struct HelloOpt {
-    #[arg()]
-    text: String,
-{% if craft_value_enum %}
-    #[arg(short, long, default_value = "stdout")]
-    output: Output,
+    #[derive(Parser, Debug)]
+    pub struct HelloOpt {
+        #[arg()]
+        text: String,
+    {% if craft_value_enum %}
+        #[arg(short, long, default_value = "stdout")]
+        output: Output,
+    {% endif %}
+    }
+
+    impl ArgsDispatcher<Error> for HelloOpt {
+        fn dispatch(&self) -> Result<()> {
+            {% if craft_value_enum %}
+            match &self.output {
+                Output::Stdout => {
+                    println!("{}", &self.text);
+                },
+                Output::Stderr => {
+                    eprintln!("{}", &self.text);
+                },
+            }
+            {% else %}
+            println!("{}", &self.text);
+            {% endif %}
+            Ok(())
+        }
+    }
 {% endif %}
-
-}
-impl ArgsDispatcher<Error> for HelloOpt {
-    fn dispatch(&self) -> Result<()> {
-        {% if craft_value_enum %}
-        match &self.output {
-            Output::Stdout => {
-                println!("{}", &self.text);
-            },
-            Output::Stderr => {
-                eprintln!("{}", &self.text);
-            },
-        }
-        {% else %}
-        println!("{}", &self.text);
-        {% endif %}
-        Ok(())
-    }
-}
 
 {% if craft_lib %}
 fn main() -> Result<()> {

@@ -34,6 +34,7 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
     context.insert("crate_binaries", &craft.bin_entries());
     context.insert("crate_lib", &craft.lib_entry("lib.rs"));
     context.insert("craft_value_enum", &craft.value_enum);
+    context.insert("craft_subcommands", &craft.subcommands);
     (tera, context)
 }
 pub fn render(craft: &Craft, template_name: &str) -> Option<String> {

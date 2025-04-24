@@ -35,6 +35,9 @@ pub struct Craft {
     pub value_enum: bool,
 
     #[arg(short, long)]
+    pub subcommands: bool,
+
+    #[arg(short, long)]
     pub verbose: bool,
 }
 pub trait ClapExecuter: Parser {
