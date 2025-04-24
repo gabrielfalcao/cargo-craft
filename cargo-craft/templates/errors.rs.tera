@@ -1,22 +1,9 @@
-use serde::ser::SerializeStruct;
-use serde::{Serialize, Serializer};
 use std::fmt::Display;
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Error {
     IOError(String),
-}
-
-impl Serialize for Error {
-    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut s = serializer.serialize_struct("Error", 2)?;
-        s.serialize_field("variant", &self.variant())?;
-        s.serialize_field("message", &format!("{}", self))?;
-        s.end()
-    }
 }
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -25,7 +12,7 @@ impl Display for Error {
             "{}: {}",
             self.variant(),
             match self {
-                Self::IOError(s) => format!("{}", s),
+                Self::IOError(e) => e.to_string()
             }
         )
     }

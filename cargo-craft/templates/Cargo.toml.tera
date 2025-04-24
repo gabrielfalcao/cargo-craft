@@ -1,12 +1,13 @@
 [package]
 name = "{{ crate_name }}"
 version = "{{ crate_version }}"
-edition = "2024"
+description = "{{ crate_name }} {% if craft_cli %}command-line{% else %}library{% endif %}"
+readme = "README.md"
+homepage = "https://crates.io/crates/{{ crate_name }}"
+license = "MIT"
+edition = "2021"
 autoexamples = false
 autobenches = false
-
-[package.metadata]
-cargo-args = ["-Zmtime-on-use", "-Zavoid-dev-deps", "-Zcustom_mir"]
 
 {% if craft_lib %}
 [lib]

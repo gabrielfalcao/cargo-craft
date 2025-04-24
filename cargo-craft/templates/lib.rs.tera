@@ -1,5 +1,8 @@
 mod errors;
 pub use errors::{Error, Result};
-
+{% if craft_cli %}
+mod cli;
+pub use cli::{ParserDispatcher, SubcommandDispatcher, ArgsDispatcher};
+{% endif %}
 mod {{ package_name }};
 pub use {{ package_name }}::*;

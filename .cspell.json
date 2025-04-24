@@ -1,0 +1,7 @@
+{
+  "version": "0.2",
+  "language": "en,en-us",
+  "words": [],
+  "dictionaries": ["rust", "softwareTerms", "bash", "en-us", "misc"],
+  "ignorePaths": ["Cargo.toml", "Cargo.lock", "target"]
+}

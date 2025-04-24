@@ -1,6 +1,5 @@
 use crate::errors::Result;
 use crate::helpers::*;
-use crate::shell::*;
 use crate::templates::{render, render_cli};
 use clap::Parser;
 use iocore::Path;
@@ -46,9 +45,7 @@ pub trait ClapExecuter: Parser {
         Ok(())
     }
     fn args() -> Vec<String> {
-        let args = std::env::args()
-            .map(|arg| arg.to_string())
-            .collect::<Vec<String>>();
+        let args = iocore::env::args();
         let execname = Path::new(&args[0]).name();
         let args = if execname.ends_with("cargo") || execname.ends_with("cargo-craft") {
             args[1..].to_vec()
@@ -127,7 +124,12 @@ impl Craft {
 
     pub fn git_entries(&self) -> Vec<Table> {
         let mut entries = Vec::<Table>::new();
-        for name in vec![".gitignore", ".rustfmt.toml", "rust-toolchain.toml"] {
+        for name in vec![
+            ".gitignore",
+            ".rustfmt.toml",
+            "rust-toolchain.toml",
+            "README.md",
+        ] {
             let mut table = Table::new();
             table.insert("name".to_string(), Value::String(name.to_string()));
             table.insert(
@@ -170,8 +172,15 @@ impl Craft {
 
         let mut ttargets = vec![
             (render(&self, "lib.rs"), vec![self.lib_entry("lib.rs")]),
-            (render(&self, "{{package_name}}.rs"), vec![self.lib_entry(format!("{}.rs", self.package_name()))]),
-            (render(&self, "errors.rs"), vec![self.lib_entry("errors.rs")]),
+            (render(&self, "cli.rs"), vec![self.lib_entry("cli.rs")]),
+            (
+                render(&self, "{{package_name}}.rs"),
+                vec![self.lib_entry(format!("{}.rs", self.package_name()))],
+            ),
+            (
+                render(&self, "errors.rs"),
+                vec![self.lib_entry("errors.rs")],
+            ),
             (
                 render_cli(&self),
                 self.bin_entries()
@@ -222,7 +231,6 @@ impl Craft {
                 )?;
             }
         }
-        // shell_command(format!("tput clear"), self.path(), self.verbose)?;
         cargo_add("serde -F derive", self.path(), self.verbose)?;
         cargo_add("iocore", self.path(), self.verbose)?;
         if self.cli || self.bin_entries().len() > 0 {
@@ -234,6 +242,20 @@ impl Craft {
         }
         for dep in self.deps() {
             cargo_add(&dep, self.path(), self.verbose)?;
+        }
+        for subcommand in ["check", "build", "test"] {
+            let command = format!("cargo {}", subcommand);
+            match shell_command(&command, self.path(), self.verbose)? {
+                0 => {}
+                exit_code => {
+                    let error = format!("{:#?} failed with {}", &command, exit_code);
+                    if subcommand == "check" {
+                        return Err(crate::Error::ShellCommandError(error));
+                    } else {
+                        std::process::exit(1);
+                    }
+                }
+            }
         }
         Ok(())
     }
@@ -257,10 +279,20 @@ impl ClapExecuter for Craft {
 }
 
 pub fn cargo_add(dep: impl std::fmt::Display, current_dir: Path, verbose: bool) -> Result<()> {
-    shell_command(format!("cargo-unix add {}", dep), current_dir, verbose)?;
+    let command = format!("cargo add {}", dep);
+    shell_command(&command, current_dir, verbose)?;
     Ok(())
 }
-
+pub fn shell_command(
+    command: impl std::fmt::Display,
+    current_dir: impl Into<Path>,
+    verbose: bool,
+) -> Result<i32> {
+    if verbose {
+        eprintln!("{}", &command.to_string())
+    }
+    Ok(iocore::shell_command(command, current_dir)?)
+}
 #[cfg(test)]
 mod test_craft {
     use crate::Craft;

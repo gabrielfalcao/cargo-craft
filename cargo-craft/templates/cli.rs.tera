@@ -1,7 +1,8 @@
 use clap::{Parser, Subcommand};
 
 {% if craft_lib %}
-use {{ package_name }}::errors::Result;
+use {{ package_name }}::{Result, Error};
+use {{ package_name }}::{ParserDispatcher, SubcommandDispatcher, ArgsDispatcher};
 {% endif %}
 {% if craft_value_enum %}
 use clap::builder::PossibleValue;
@@ -9,15 +10,16 @@ use clap::ValueEnum;
 {% endif %}
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = "{{ package_name }}{% if craft_cli %} command-line utility{% else %}{% endif %}")]
+#[command(author, version, about, long_about = "{{ crate_name }}{% if craft_cli %} command-line{% else %}{% endif %}")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
-
-{% if craft_value_enum %}
-    #[arg(short, long, default_value = "stdout")]
-    output: Output,
-{% endif %}
+}
+impl ParserDispatcher<Error> for Cli {
+    fn dispatch(&self) -> Result<()> {
+        self.command.dispatch()?;
+        Ok(())
+    }
 }
 
 
@@ -73,37 +75,47 @@ impl ValueEnum for Output {
 pub enum Command {
     Hello(HelloOpt),
 }
+impl SubcommandDispatcher<Error> for Command {
+    fn dispatch(&self) -> Result<()> {
+        match self {
+            Command::Hello(op) => op.dispatch()?,
+        }
+        Ok(())
+    }
+}
 
 #[derive(Parser, Debug)]
 pub struct HelloOpt {
     #[arg()]
     text: String,
-}
+{% if craft_value_enum %}
+    #[arg(short, long, default_value = "stdout")]
+    output: Output,
+{% endif %}
 
+}
+impl ArgsDispatcher<Error> for HelloOpt {
+    fn dispatch(&self) -> Result<()> {
+        {% if craft_value_enum %}
+        match &self.output {
+            Output::Stdout => {
+                println!("{}", &self.text);
+            },
+            Output::Stderr => {
+                eprintln!("{}", &self.text);
+            },
+        }
+        {% else %}
+        println!("{}", &self.text);
+        {% endif %}
+        Ok(())
+    }
+}
 
 {% if craft_lib %}
 fn main() -> Result<()> {
 {% else %}
 fn main()  {
 {% endif %}
-    let args = Cli::parse();
-    match args.command {
-        {% if craft_value_enum %}
-        Command::Hello(op) => match args.output {
-            Output::Stdout => {
-                println!("{}", op.text);
-            },
-            Output::Stderr => {
-                eprintln!("{}", op.text);
-            },
-        },
-        {% else %}
-        Command::Hello(op) => {
-            println!("{}", op.text);
-        },
-        {% endif %}
-    }
-    {% if craft_lib %}
-    Ok(())
-    {% endif %}
+    Cli::main()
 }

@@ -7,6 +7,8 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
         .unwrap();
     tera.add_raw_template("lib.rs", include_str!("./templates/lib.rs.tera"))
         .unwrap();
+    tera.add_raw_template("cli.rs", include_str!("./templates/lib_cli.rs.tera"))
+        .unwrap();
     tera.add_raw_template("{{package_name}}.rs", include_str!("./templates/{{package_name}}.rs.tera"))
         .unwrap();
     tera.add_raw_template("cli", include_str!("./templates/cli.rs.tera"))
@@ -18,6 +20,8 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
     tera.add_raw_template(".rustfmt.toml", include_str!("./templates/rustfmt.toml.tera"))
         .unwrap();
     tera.add_raw_template("rust-toolchain.toml", include_str!("./templates/rust-toolchain.toml.tera"))
+        .unwrap();
+    tera.add_raw_template("README.md", include_str!("./templates/README.md.tera"))
         .unwrap();
 
     let mut context = Context::new();

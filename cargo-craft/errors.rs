@@ -27,9 +27,9 @@ impl Display for Error {
             "{}: {}",
             self.variant(),
             match self {
-                Self::ShellCommandError(s) => format!("{}", s),
-                Self::IOError(s) => format!("{}", s),
-                Self::SerializationError(s) => format!("{}", s),
+                Self::ShellCommandError(e) => e.to_string(),
+                Self::IOError(e) => e.to_string(),
+                Self::SerializationError(e) => e.to_string(),
             }
         )
     }
