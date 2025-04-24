@@ -2,7 +2,11 @@ use clap::{Parser, Subcommand};
 
 {% if craft_lib %}
 use {{ package_name }}::{Result, Error};
+{% if craft_subcommands %}
 use {{ package_name }}::cli::{ParserDispatcher, SubcommandDispatcher, ArgsDispatcher};
+{% else %}
+use {{ package_name }}::cli::ParserDispatcher;
+{% endif %}
 {% endif %}
 {% if craft_value_enum %}
 use clap::builder::PossibleValue;
