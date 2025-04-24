@@ -25,4 +25,5 @@ path = "{{ entry["path"] }}"
 doctest = false
 bench = false
 doc = false
+test = false
 {% endfor %}{% endif %}

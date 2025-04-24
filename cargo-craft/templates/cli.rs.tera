@@ -1,5 +1,8 @@
+{% if craft_subcommands %}
 use clap::{Parser, Subcommand};
-
+{% else %}
+use clap::Parser;
+{% endif %}
 {% if craft_lib %}
 use {{ package_name }}::{Result, Error};
 {% if craft_subcommands %}

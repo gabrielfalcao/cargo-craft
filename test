@@ -1,54 +1,103 @@
 #!/usr/bin/env bash
-set -ex
-
-tests() {
-    set -x
-    ./target/debug/cargo-craft $*
-    set +x
+set -e
+cargo_craft() {
+    set +e
+    path=$(echo "$@" | awk '{ print $NF }')
+    if [ -e "$path" ]; then
+        rm -rf "$path"
+    fi
+    set -e
+    cargo craft --quiet-add $*
 }
+exit_on_fail() {
+    path="$1"
+    shift
+    declare -a args=( $* )
+    if [ ${#args} -gt 0 ]; then
+        set +e
+        1>&2 echo -e "running \x1b[1;38;5;220m${path} $*\x1b[0m"
+        (cd "$path" && cargo run --offline $*)
+        if [ "$?" == 0 ]; then
+            success "$path"
+        else
+            1>&2 echo -e "\x1b[1;38;5;160mFAILED: \x1b[0m${path}"
+            exit 1
+        fi
+    else
+        success "$path"
+    fi
+}
+success() {
+    path="$1"
+    shift
+    rm -rf "$path"
+    set -e
+    1>&2 echo -e "\x1b[1;38;5;70mSUCCEEDED: \x1b[0m${path}"
+}
+cbt() {
+    path="$1"
+    shift
+    (cd "$path" && cargo check --offline -q)
+    (cd "$path" && cargo build --offline -q)
+    (cd "$path" && cargo test --offline -q)
+}
+assert_file_exists() {
+    path="$1"
+    shift
+    if [ -f "$path" ]; then
+        1>&2 echo -e "${path} \x1b[1;38;5;70mexists\x1b[0m"
+    else
+        1>&2 echo -e "${path} \x1b[1;38;5;160mdoes not exist\x1b[0m"
+        ls -latrh "$(dirname "$path")"
+        exit 1
+    fi
+}
+while [ "$(which cargo-craft)" != "$HOME/.cargo/bin/cargo-craft" ]; do
+    rm -fv "$(which cargo-craft)"
+done
+cargo check -q
+cargo install --offline --path .
 
-cargo cbt -q
-cargo build
+cargo_craft -sc tests-cli-subcommands
+cbt tests-cli-subcommands
+assert_file_exists tests-cli-subcommands/Cargo.toml
+assert_file_exists tests-cli-subcommands/.gitignore
+assert_file_exists tests-cli-subcommands/.rustfmt.toml
+assert_file_exists tests-cli-subcommands/tests-cli-subcommands.rs
+exit_on_fail tests-cli-subcommands hello world
 
-rm -rf tests-cli
-tests -sc tests-cli
-(cd tests-cli && cargo cbt -q)
-test -f tests-cli/Cargo.toml
-test -f tests-cli/.gitignore
-test -f tests-cli/.rustfmt.toml
-test -f tests-cli/tests.rs
-(cd tests-cli && cargo run hello world)
-rm -rf tests-cli
 
-rm -rf tests-cli
-tests -c tests-cli
-(cd tests-cli && cargo cbt -q)
-test -f tests-cli/Cargo.toml
-test -f tests-cli/.gitignore
-test -f tests-cli/.rustfmt.toml
-test -f tests-cli/tests.rs
-(cd tests-cli && cargo run hello world)
-rm -rf tests-cli
+cargo_craft -c tests-cli
+cbt tests-cli
+assert_file_exists tests-cli/Cargo.toml
+assert_file_exists tests-cli/.gitignore
+assert_file_exists tests-cli/.rustfmt.toml
+assert_file_exists tests-cli/tests-cli.rs
+exit_on_fail tests-cli "hello world"
 
-rm -rf tests-no-cli
-tests tests-no-cli
-(cd tests-no-cli && cargo cbt -q)
-test -f tests-no-cli/Cargo.toml
-test -f tests-no-cli/.gitignore
-test -f tests-no-cli/.rustfmt.toml
+cargo_craft -Vc tests-cli-value-parser
+cbt tests-cli-value-parser
+assert_file_exists tests-cli-value-parser/Cargo.toml
+assert_file_exists tests-cli-value-parser/.gitignore
+assert_file_exists tests-cli-value-parser/.rustfmt.toml
+assert_file_exists tests-cli-value-parser/tests-cli-value-parser-cli.rs
+exit_on_fail tests-cli-value-parser "hello world"
+
+cargo_craft -cVs tests-cli-value-parser-subcommands
+assert_file_exists tests-cli-value-parser-subcommands/Cargo.toml
+assert_file_exists tests-cli-value-parser-subcommands/.gitignore
+assert_file_exists tests-cli-value-parser-subcommands/.rustfmt.toml
+assert_file_exists tests-cli-value-parser-subcommands/tests-cli-value-parser-subcommands-cli.rs
+exit_on_fail tests-cli-value-parser-subcommands hello world
+
+
+cargo_craft tests-no-cli
+cbt tests-no-cli
+assert_file_exists tests-no-cli/Cargo.toml
+assert_file_exists tests-no-cli/.gitignore
+assert_file_exists tests-no-cli/.rustfmt.toml
 if [ -f tests-no-cli/tests-no-cli-cli.rs ]; then
     1>&2 echo "command-line file should not have been rendered without providing '-c' option"
     exit 1
 fi
-rm -rf tests-no-cli
-
-
-rm -rf tests-cli-value-parser
-tests -cv tests-cli-value-parser
-(cd tests-cli-value-parser && cargo cbt -q)
-test -f tests-cli-value-parser/Cargo.toml
-test -f tests-cli-value-parser/.gitignore
-test -f tests-cli-value-parser/.rustfmt.toml
-test -f tests-cli-value-parser/tests-cli-value-parser-cli.rs
-(cd tests-cli-value-parser && cargo run hello world)
-rm -rf tests-cli-value-parser
+exit_on_fail tests-no-cli

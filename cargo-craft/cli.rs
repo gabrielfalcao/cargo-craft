@@ -8,28 +8,28 @@ use toml::{Table, Value};
 #[derive(Parser, Debug)]
 pub struct Craft {
     #[arg(value_parser = valid_manifest_path)]
-    at: Path,
+    pub at: Path,
 
     #[arg(short, long, value_parser = valid_package_name)]
-    package_name: Option<String>,
+    pub package_name: Option<String>,
 
     #[arg(long, default_value = "0.0.1")]
-    version: String,
+    pub version: String,
 
     #[arg(short, long)]
-    dep: Vec<String>,
+    pub dep: Vec<String>,
 
     #[arg(short, long)]
     pub cli: bool,
 
     #[arg(short, long)]
-    bin: Vec<String>,
+    pub bin: Vec<String>,
 
     #[arg(long)]
-    lib_path: Option<String>,
+    pub lib_path: Option<String>,
 
     #[arg(long, default_value = ".")]
-    bin_path: String,
+    pub bin_path: String,
 
     #[arg(short = 'V', long)]
     pub value_enum: bool,
@@ -39,8 +39,14 @@ pub struct Craft {
 
     #[arg(short, long)]
     pub verbose: bool,
+
+    #[arg(short, long, help = "cargo add --quiet")]
+    pub quiet_add: bool,
+
+    #[arg(short, long)]
+    pub online: bool,
 }
-pub trait ClapExecuter: Parser {
+pub trait ClapExecuter: Parser + std::fmt::Debug {
     fn run(args: &Self) -> Result<()>;
     fn main() -> Result<()> {
         let args = Self::parse_from(Self::args());
@@ -100,7 +106,7 @@ impl Craft {
 
     pub fn bin_names(&self) -> Vec<String> {
         let mut binaries = self.bin.clone();
-        if self.bin.len() == 0 && self.cli {
+        if !binaries.contains(&self.crate_name()) {
             binaries.push(self.crate_name());
         }
         binaries
@@ -234,20 +240,28 @@ impl Craft {
                 )?;
             }
         }
-        cargo_add("serde -F derive", self.path(), self.verbose)?;
-        cargo_add("iocore", self.path(), self.verbose)?;
+        cargo_add("serde -F derive", self.path(), self.verbose, self.quiet_add)?;
+        cargo_add("iocore", self.path(), self.verbose, self.quiet_add)?;
         if self.cli || self.bin_entries().len() > 0 {
             cargo_add(
                 "clap -F derive,env,string,unicode,wrap_help",
                 self.path(),
                 self.verbose,
+                self.quiet_add
             )?;
         }
         for dep in self.deps() {
-            cargo_add(&dep, self.path(), self.verbose)?;
+            cargo_add(&dep, self.path(), self.verbose, self.quiet_add)?;
+        }
+        let mut cargo_command_args = Vec::<String>::new();
+        if !self.online {
+            cargo_command_args.push("--offline".to_string());
+        }
+        if !self.verbose {
+            cargo_command_args.push("--quiet".to_string());
         }
         for subcommand in ["check", "build", "test"] {
-            let command = format!("cargo {}", subcommand);
+            let command = format!("cargo {} {}", subcommand, cargo_command_args.join(" "));
             match shell_command(&command, self.path(), self.verbose)? {
                 0 => {}
                 exit_code => {
@@ -281,8 +295,13 @@ impl ClapExecuter for Craft {
     }
 }
 
-pub fn cargo_add(dep: impl std::fmt::Display, current_dir: Path, verbose: bool) -> Result<()> {
-    let command = format!("cargo add {}", dep);
+pub fn cargo_add(
+    dep: impl std::fmt::Display,
+    current_dir: Path,
+    verbose: bool,
+    quiet: bool,
+) -> Result<()> {
+    let command = format!("cargo add {}{}", if quiet { " -q " } else { "" }, dep);
     shell_command(&command, current_dir, verbose)?;
     Ok(())
 }
