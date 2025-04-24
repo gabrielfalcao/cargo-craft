@@ -80,15 +80,19 @@ cbt tests-cli-value-parser
 assert_file_exists tests-cli-value-parser/Cargo.toml
 assert_file_exists tests-cli-value-parser/.gitignore
 assert_file_exists tests-cli-value-parser/.rustfmt.toml
-assert_file_exists tests-cli-value-parser/tests-cli-value-parser-cli.rs
-exit_on_fail tests-cli-value-parser "hello world"
+assert_file_exists tests-cli-value-parser/tests-cli-value-parser.rs
+exit_on_fail tests-cli-value-parser hello world
+# exit_on_fail tests-cli-value-parser --std out "hello world"
+# exit_on_fail tests-cli-value-parser --std err "hello world"
 
 cargo_craft -cVs tests-cli-value-parser-subcommands
 assert_file_exists tests-cli-value-parser-subcommands/Cargo.toml
 assert_file_exists tests-cli-value-parser-subcommands/.gitignore
 assert_file_exists tests-cli-value-parser-subcommands/.rustfmt.toml
-assert_file_exists tests-cli-value-parser-subcommands/tests-cli-value-parser-subcommands-cli.rs
+assert_file_exists tests-cli-value-parser-subcommands/tests-cli-value-parser-subcommands.rs
 exit_on_fail tests-cli-value-parser-subcommands hello world
+# exit_on_fail tests-cli-value-parser-subcommands --std out hello world
+# exit_on_fail tests-cli-value-parser-subcommands --std err hello world
 
 
 cargo_craft tests-no-cli

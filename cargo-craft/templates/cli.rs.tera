@@ -24,10 +24,10 @@ pub struct Cli {
     pub command: Command,
     {% else %}
     #[arg()]
-    text: String,
+    text: Vec<String>,
     {% if craft_value_enum %}
-    #[arg(short, long, default_value = "stdout")]
-    output: Output,
+    #[arg(short, long, default_value = "out")]
+    std: Std,
     {% endif %}
     {% endif %}
 }
@@ -37,16 +37,16 @@ impl ParserDispatcher<Error> for Cli {
         self.command.dispatch()?;
         {% else %}
             {% if craft_value_enum %}
-            match &self.output {
-                Output::Stdout => {
-                    println!("{}", &self.text);
+            match &self.std {
+                Std::Out => {
+                    println!("{}", &self.text.join(" "));
                 },
-                Output::Stderr => {
-                    eprintln!("{}", &self.text);
+                Std::Err => {
+                    eprintln!("{}", &self.text.join(" "));
                 },
             }
             {% else %}
-            println!("{}", &self.text);
+            println!("{}", &self.text.join(" "));
             {% endif %}
         {% endif %}
         Ok(())
@@ -56,27 +56,27 @@ impl ParserDispatcher<Error> for Cli {
 
 {% if craft_value_enum %}
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Output {
-    Stderr,
-    Stdout,
+pub enum Std {
+    Err,
+    Out,
 }
-impl std::fmt::Display for Output {
+impl std::fmt::Display for Std {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match &self {
-                Output::Stderr => "stderr",
-                Output::Stdout => "stdout",
+                Std::Err => "err",
+                Std::Out => "out",
             }
         )
     }
 }
-impl ValueEnum for Output {
+impl ValueEnum for Std {
     fn value_variants<'a>() -> &'a [Self] {
         &[
-            Output::Stderr,
-            Output::Stdout,
+            Std::Err,
+            Std::Out,
         ]
     }
 
@@ -88,13 +88,13 @@ impl ValueEnum for Output {
         )
     }
 
-    fn from_str(input: &str, ignore_case: bool) -> std::result::Result<Output, String> {
+    fn from_str(input: &str, ignore_case: bool) -> std::result::Result<Std, String> {
         let input = if ignore_case { input.to_lowercase() } else { input.to_string() };
         let input = input.trim();
 
         Ok(match input.to_lowercase().as_str() {
-            "stderr" => Output::Stderr,
-            "stdout" => Output::Stdout,
+            "err" => Std::Err,
+            "out" => Std::Out,
             unknown => return Err(unknown.to_string()),
         })
     }
@@ -119,26 +119,26 @@ impl ValueEnum for Output {
     #[derive(Parser, Debug)]
     pub struct HelloOpt {
         #[arg()]
-        text: String,
+        text: Vec<String>,
     {% if craft_value_enum %}
-        #[arg(short, long, default_value = "stdout")]
-        output: Output,
+        #[arg(short, long, default_value = "out")]
+        std: Std,
     {% endif %}
     }
 
     impl ArgsDispatcher<Error> for HelloOpt {
         fn dispatch(&self) -> Result<()> {
             {% if craft_value_enum %}
-            match &self.output {
-                Output::Stdout => {
-                    println!("{}", &self.text);
+            match &self.std {
+                Std::Out => {
+                    println!("{}", &self.text.join(" "));
                 },
-                Output::Stderr => {
-                    eprintln!("{}", &self.text);
+                Std::Err => {
+                    eprintln!("{}", &self.text.join(" "));
                 },
             }
             {% else %}
-            println!("{}", &self.text);
+            println!("{}", &self.text.join(" "));
             {% endif %}
             Ok(())
         }
