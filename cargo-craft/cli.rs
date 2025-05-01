@@ -51,7 +51,7 @@ pub struct Craft {
     pub add_error_type: Vec<String>,
 
     #[arg(short, long)]
-    pub no_rollback: bool
+    pub no_rollback: bool,
 }
 pub trait ClapExecuter: Parser + std::fmt::Debug {
     fn run(args: &Self) -> Result<()>;
@@ -191,7 +191,10 @@ impl Craft {
         Ok(deps)
     }
     pub fn error_types(&self) -> Vec<String> {
-        self.add_error_type.iter().map(|h|into_acceptable_error_type_name(h)).collect()
+        self.add_error_type
+            .iter()
+            .map(|h| into_acceptable_error_type_name(h))
+            .collect()
     }
     pub fn rollback_on_error(&self) -> bool {
         !self.no_rollback
@@ -438,6 +441,8 @@ mod test_craft {
             verbose: false,
             quiet_add: true,
             offline: true,
+            no_rollback: true,
+            add_error_type: Vec::new(),
         }
     }
     #[test]

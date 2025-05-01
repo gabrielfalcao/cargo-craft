@@ -85,3 +85,30 @@ impl<T> From<std::result::Result<T, Error>> for Exit {
         }
     }
 }
+{% raw %}
+#[macro_export]
+macro_rules! function_name {
+    () => {{
+        fn f() {}
+        fn type_name_of<T>(_: T) -> &'static str {
+            std::any::type_name::<T>()
+        }
+        let name = type_name_of(f);
+        let name = name.strip_suffix("::f").unwrap();
+        name
+    }};
+}
+#[macro_export]
+macro_rules! traceback {
+    ($variant:ident, $error:expr ) => {{
+        let name = $crate::function_name!();
+        $crate::Error::$variant(format!("{} [{}:[{}:{}]]\n", $error, name, file!(), line!()))
+    }};
+    ($variant:ident, $format:literal, $arg:expr  ) => {{
+        $crate::traceback!($variant, format!($format, $arg))
+    }};
+    ($variant:ident, $format:literal, $( $arg:expr ),* ) => {{
+        $crate::traceback!($variant, format!($format, $($arg,)*))
+    }};
+}
+{% endraw %}

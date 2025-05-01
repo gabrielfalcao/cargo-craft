@@ -1,4 +1,4 @@
-pub trait ParserDispatcher<E: std::error::Error>: clap::Parser
+pub  trait ParserDispatcher<E: std::error::Error>: clap::Parser
 where
     crate::Exit: From<std::result::Result<(), E>>,
 {
@@ -29,10 +29,10 @@ where
         (args, is_cargo)
     }
 }
-pub trait SubcommandDispatcher<E: std::error::Error>: clap::Subcommand {
+pub  trait SubcommandDispatcher<E: std::error::Error>: clap::Subcommand {
     fn dispatch(&self) -> Result<(), E>;
 }
 
-pub trait ArgsDispatcher<E: std::error::Error>: clap::Args {
+pub  trait ArgsDispatcher<E: std::error::Error>: clap::Args {
     fn dispatch(&self) -> Result<(), E>;
 }
