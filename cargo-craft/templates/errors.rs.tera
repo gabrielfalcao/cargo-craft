@@ -1,9 +1,16 @@
 use std::fmt::Display;
-use serde::{Serialize, Deserialize};
+
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Error {
     IOError(String),
+    {% for name in craft_errors %}
+    {{name}}Error(String),
+    {% endfor %}
+    {% for dependency in craft_dependencies %}
+    {{dependency.pascal_case}}Error(String),
+    {% endfor %}
 }
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -12,7 +19,13 @@ impl Display for Error {
             "{}: {}",
             self.variant(),
             match self {
-                Self::IOError(e) => e.to_string()
+                Self::IOError(e) => e.to_string(),
+                {% for name in craft_errors %}
+                Self::{{name}}Error(e) => e.to_string(),
+                {% endfor %}
+                {% for dependency in craft_dependencies %}
+                Self::{{dependency.pascal_case}}Error(e) => e.to_string(),
+                {% endfor %}
             }
         )
     }
@@ -22,6 +35,13 @@ impl Error {
     pub fn variant(&self) -> String {
         match self {
             Error::IOError(_) => "IOError",
+            {% for name in craft_errors %}
+            Self::{{name}}Error(_) => "{{name}}Error",
+            {% endfor %}
+            {% for dependency in craft_dependencies %}
+            Self::{{dependency.pascal_case}}Error(_) => "{{name}}Error",
+            {% endfor %}
+
         }
         .to_string()
     }
@@ -39,3 +59,29 @@ impl From<iocore::Error> for Error {
     }
 }
 pub type Result<T> = std::result::Result<T, Error>;
+
+
+#[derive(Debug, Clone)]
+pub enum Exit {
+    Success,
+    Error(Error),
+}
+impl std::process::Termination for Exit {
+    fn report(self) -> std::process::ExitCode {
+        match &self {
+            Exit::Success => std::process::ExitCode::from(0),
+            Exit::Error(error) => {
+                eprintln!("{}", error);
+                std::process::ExitCode::from(1)
+            },
+        }
+    }
+}
+impl<T> From<std::result::Result<T, Error>> for Exit {
+    fn from(result: std::result::Result<T, Error>) -> Exit {
+        match result {
+            Ok(_) => Exit::Success,
+            Err(e) => Exit::Error(e),
+        }
+    }
+}

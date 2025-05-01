@@ -137,15 +137,39 @@ pub fn capitalize_string(val: impl std::fmt::Display) -> String {
     match val.len() {
         0 => val,
         1 => val.to_uppercase(),
-        _ => format!("{}{}", val[0..1].to_uppercase(), val[1..].to_string())
+        _ => format!("{}{}", val[0..1].to_uppercase(), val[1..].to_string()),
     }
 }
 pub fn struct_name_from_package_name(val: impl std::fmt::Display) -> String {
     let val = val.to_string();
     let package_name = into_acceptable_package_name(&val);
-    package_name.split("_").map(|part|capitalize_string(part)).collect::<String>()
+    package_name
+        .split("_")
+        .map(|part| capitalize_string(part))
+        .collect::<String>()
 }
 
+pub fn valid_crate_name(val: &str) -> ::std::result::Result<String, String> {
+    Ok(
+        acceptable_crate_name(into_acceptable_name(val, '-').as_str())
+            .map_err(|_| format!("{:#?} is not a valid crate name", val))?,
+    )
+}
+pub fn to_pascal_case(val: impl std::fmt::Display) -> String {
+    let pattern = regex::Regex::new(r"\W+").unwrap();
+    pattern
+        .split(&val.to_string())
+        .map(|h| capitalize_string(h.to_string()))
+        .collect()
+}
+pub fn words(val: impl std::fmt::Display) -> Vec<String> {
+    let pattern = regex::Regex::new(r"\b\W+\b").unwrap();
+    pattern.find_iter(val.to_string().as_str()).map(|h|h.as_str().to_string()).collect()
+}
+pub fn into_acceptable_error_type_name(val: &str) -> String {
+    let pattern = regex::Regex::new(r"(?i)^(?<name>.*)(?:Error)?$").unwrap();
+    words(pattern.replace_all(val, "$name")).iter().map(|h|capitalize_string(h)).collect::<Vec<String>>().join("")
+}
 
 #[cfg(test)]
 mod tests {

@@ -1,12 +1,7 @@
-mod errors;
-pub use errors::{Error, Result};
-{% if craft_cli %}
-pub mod cli;
-{% if craft_subcommands %}
-pub use cli::{ParserDispatcher, SubcommandDispatcher, ArgsDispatcher};
-{% else %}
-pub use cli::ParserDispatcher;
-{% endif %}
-{% endif %}
-mod {{ package_name }};
+pub(crate) mod errors;
+pub use errors::{Error, Result, Exit};
+{% if craft_cli %}pub mod cli;
+{% if craft_subcommands %}pub use cli::{ParserDispatcher, SubcommandDispatcher, ArgsDispatcher};
+{% else %}pub use cli::ParserDispatcher;{% endif %}{% endif %}
+pub(crate) mod {{ package_name }};
 pub use {{ package_name }}::*;

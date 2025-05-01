@@ -1,11 +1,12 @@
 use crate::errors::Result;
 use crate::helpers::*;
 use crate::templates::{render, render_cli};
+use crate::traceback;
 use clap::Parser;
 use iocore::Path;
 use toml::{Table, Value};
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Craft {
     #[arg(value_parser = valid_manifest_path)]
     pub at: Path,
@@ -44,7 +45,13 @@ pub struct Craft {
     pub quiet_add: bool,
 
     #[arg(short, long)]
-    pub online: bool,
+    pub offline: bool,
+
+    #[arg(short = 'e', long)]
+    pub add_error_type: Vec<String>,
+
+    #[arg(short, long)]
+    pub no_rollback: bool
 }
 pub trait ClapExecuter: Parser + std::fmt::Debug {
     fn run(args: &Self) -> Result<()>;
@@ -170,28 +177,50 @@ impl Craft {
     pub fn manifest_path(&self) -> Path {
         self.path_to("Cargo.toml")
     }
-    pub fn deps(&self) -> Vec<String> {
-        self.dep.to_vec()
+    pub fn deps(&self) -> Result<Vec<Dependency>> {
+        let mut deps = Vec::new();
+        for h in self.dep.iter() {
+            let mut args = vec![format!("dependency")];
+            args.extend(
+                h.split(" ")
+                    .filter(|h| h.trim().len() > 0)
+                    .map(|h| h.to_string()),
+            );
+            deps.push(Dependency::try_parse_from(args).map_err(|e| traceback!(ParseError, e))?);
+        }
+        Ok(deps)
+    }
+    pub fn error_types(&self) -> Vec<String> {
+        self.add_error_type.iter().map(|h|into_acceptable_error_type_name(h)).collect()
+    }
+    pub fn rollback_on_error(&self) -> bool {
+        !self.no_rollback
     }
     pub fn go(&self) -> Result<()> {
         let manifest_path = self.manifest_path();
-        let manifest_string = render(&self, "Cargo.toml").unwrap();
+        let manifest_string = render(&self, "Cargo.toml").unwrap().unwrap();
         manifest_path.write(&manifest_string.as_bytes()).unwrap();
         println!("wrote {}", manifest_path);
 
         let mut ttargets = vec![
-            (render(&self, "lib.rs"), vec![self.lib_entry("lib.rs")]),
-            (render(&self, "cli.rs"), vec![self.lib_entry("cli.rs")]),
             (
-                render(&self, "{{package_name}}.rs"),
+                render(&self, "lib.rs").unwrap(),
+                vec![self.lib_entry("lib.rs")],
+            ),
+            (
+                render(&self, "cli.rs").unwrap(),
+                vec![self.lib_entry("cli.rs")],
+            ),
+            (
+                render(&self, "{{package_name}}.rs").unwrap(),
                 vec![self.lib_entry(format!("{}.rs", self.package_name()))],
             ),
             (
-                render(&self, "errors.rs"),
+                render(&self, "errors.rs").unwrap(),
                 vec![self.lib_entry("errors.rs")],
             ),
             (
-                render_cli(&self),
+                render_cli(&self).unwrap(),
                 self.bin_entries()
                     .iter()
                     .map(|entry| Some(entry.clone()))
@@ -204,7 +233,7 @@ impl Craft {
                 .expect("entry name")
                 .as_str()
                 .expect("str");
-            (render(&self, name), vec![Some(entry.clone())])
+            (render(&self, name).unwrap(), vec![Some(entry.clone())])
         });
         ttargets.extend(git_entries);
         let ttargets = ttargets
@@ -247,14 +276,14 @@ impl Craft {
                 "clap -F derive,env,string,unicode,wrap_help",
                 self.path(),
                 self.verbose,
-                self.quiet_add
+                self.quiet_add,
             )?;
         }
-        for dep in self.deps() {
+        for dep in self.deps()? {
             cargo_add(&dep, self.path(), self.verbose, self.quiet_add)?;
         }
         let mut cargo_command_args = Vec::<String>::new();
-        if !self.online {
+        if self.offline {
             cargo_command_args.push("--offline".to_string());
         }
         if !self.verbose {
@@ -274,13 +303,16 @@ impl Craft {
                 }
             }
         }
+        shell_command("git init", self.path(), self.verbose)?;
+        shell_command("git add .", self.path(), self.verbose)?;
+
         Ok(())
     }
 }
 
 impl ClapExecuter for Craft {
     fn run(args: &Craft) -> Result<()> {
-        let could_rollback = !args.path().try_canonicalize().exists();
+        let could_rollback = args.rollback_on_error() && !args.path().try_canonicalize().exists();
         match args.go() {
             Ok(()) => Ok(()),
             Err(e) => {
@@ -315,14 +347,98 @@ pub fn shell_command(
     }
     Ok(iocore::shell_command(command, current_dir)?)
 }
+
+#[derive(Parser, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Dependency {
+    #[arg(value_parser = valid_crate_name)]
+    pub name: String,
+
+    #[arg(short = 'F', long)]
+    pub features: Option<String>,
+
+    #[arg(long, conflicts_with = "build")]
+    pub dev: bool,
+
+    #[arg(long)]
+    pub build: bool,
+}
+impl std::fmt::Display for Dependency {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut args = vec![self.name.to_string()];
+        if self.dev {
+            args.push("--dev".to_string());
+        }
+        if self.build {
+            args.push("--build".to_string());
+        }
+        let features = self.features();
+        if features.len() > 0 {
+            args.push(format!("-F{}", features.join(",")));
+        }
+        write!(f, "{}", args.join(" "))
+    }
+}
+
+impl Dependency {
+    pub fn features(&self) -> Vec<String> {
+        let mut features = Vec::<String>::new();
+        for h in self
+            .features
+            .clone()
+            .unwrap_or_default()
+            .split(",")
+            .filter(|h| h.trim().len() > 0)
+        {
+            features.push(h.to_string());
+        }
+        features
+    }
+    pub fn to_tera(&self) -> Table {
+        let mut dep = Table::new();
+        dep.insert("name".to_string(), Value::String(self.name.to_string()));
+        dep.insert(
+            "features".to_string(),
+            Value::Array(
+                self.features()
+                    .iter()
+                    .map(|h| Value::String(h.to_string()))
+                    .collect(),
+            ),
+        );
+        dep.insert("pascal_case".to_string(), Value::String(self.pascal_name()));
+        dep.insert("dev".to_string(), Value::Boolean(self.dev));
+        dep.insert("build".to_string(), Value::Boolean(self.build));
+        dep
+    }
+    pub fn pascal_name(&self) -> String {
+        to_pascal_case(self.name.as_str())
+    }
+}
 #[cfg(test)]
 mod test_craft {
-    use crate::Craft;
+    use crate::{tera, Craft, Dependency, Result};
     use clap::Parser;
     use iocore::{args_from_string, Path};
 
     fn craft_from_args(args: &str) -> Craft {
         Craft::parse_from(&args_from_string(args))
+    }
+    fn craft_from_name(name: &str) -> Craft {
+        Craft {
+            at: Path::raw(name),
+            package_name: None,
+            version: "0.1.0".to_string(),
+            dep: Vec::new(),
+            cli: true,
+            bin: Vec::new(),
+            lib_path: None,
+            bin_path: ".".to_string(),
+            value_enum: false,
+            subcommands: false,
+            verbose: false,
+            quiet_add: true,
+            offline: true,
+        }
     }
     #[test]
     fn test_craft_context() {
@@ -332,5 +448,55 @@ mod test_craft {
         assert_eq!(craft.struct_name(), "TestCrateName");
         assert_eq!(craft.version(), "0.0.1");
         assert_eq!(craft.lib_path(), Path::raw("test-crate-name"));
+    }
+    #[test]
+    fn test_craft_dependencies_with_features_string() -> Result<()> {
+        let mut craft = craft_from_name("dependencies");
+        craft.dep = vec![
+            "reqwest -Fblocking,deflate".to_string(),
+            "k9 --dev".to_string(),
+            "clap_builder --build".to_string(),
+        ];
+
+        let dependencies = craft.deps()?;
+        assert_eq!(
+            dependencies,
+            vec![
+                Dependency {
+                    name: "reqwest".to_string(),
+                    features: Some("blocking,deflate".to_string()),
+                    dev: false,
+                    build: false,
+                },
+                Dependency {
+                    name: "k9".to_string(),
+                    features: None,
+                    dev: true,
+                    build: false,
+                },
+                Dependency {
+                    name: "clap-builder".to_string(),
+                    features: None,
+                    dev: false,
+                    build: true,
+                }
+            ]
+        );
+
+        assert_eq!(dependencies[0].pascal_name(), "Reqwest");
+        assert_eq!(dependencies[1].pascal_name(), "K9");
+        assert_eq!(dependencies[2].pascal_name(), "ClapBuilder");
+        Ok(())
+    }
+    #[test]
+    fn test_tera() -> Result<()> {
+        let mut craft = craft_from_name("dependencies");
+        craft.dep = vec![
+            "reqwest -Fblocking,deflate".to_string(),
+            "k9 --dev".to_string(),
+            "clap_builder --build".to_string(),
+        ];
+        tera(&craft)?;
+        Ok(())
     }
 }

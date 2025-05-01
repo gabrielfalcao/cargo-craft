@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use clap::Parser;
 {% endif %}
 {% if craft_lib %}
-use {{ package_name }}::{Result, Error};
+use {{ package_name }}::{Result, Error, Exit};
 {% if craft_subcommands %}
 use {{ package_name }}::cli::{ParserDispatcher, SubcommandDispatcher, ArgsDispatcher};
 {% else %}
@@ -16,12 +16,12 @@ use clap::builder::PossibleValue;
 use clap::ValueEnum;
 {% endif %}
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = "{{ crate_name }}{% if craft_cli %} command-line{% else %}{% endif %}")]
 pub struct Cli {
     {% if craft_subcommands %}
     #[command(subcommand)]
-    pub command: Command,
+    command: Command,
     {% else %}
     #[arg()]
     text: Vec<String>,
@@ -31,6 +31,18 @@ pub struct Cli {
     {% endif %}
     {% endif %}
 }
+impl Cli {
+{% if craft_subcommands %}
+    pub fn command(&self) -> Command {
+        self.command.clone()
+    }
+{% else %}
+    pub fn text(&self) -> String {
+        self.text.join(" ")
+    }
+{% endif %}
+}
+
 impl ParserDispatcher<Error> for Cli {
     fn dispatch(&self) -> Result<()> {
         {% if craft_subcommands %}
@@ -39,7 +51,7 @@ impl ParserDispatcher<Error> for Cli {
             {% if craft_value_enum %}
             match &self.std {
                 Std::Out => {
-                    println!("{}", &self.text.join(" "));
+                    println!("{}", &self.text());
                 },
                 Std::Err => {
                     eprintln!("{}", &self.text.join(" "));
@@ -103,7 +115,7 @@ impl ValueEnum for Std {
 
 
 {% if craft_subcommands %}
-    #[derive(Subcommand, Debug)]
+    #[derive(Subcommand, Debug, Clone)]
     pub enum Command {
         Hello(HelloOpt),
     }
@@ -116,7 +128,7 @@ impl ValueEnum for Std {
         }
     }
 
-    #[derive(Parser, Debug)]
+    #[derive(Parser, Debug, Clone)]
     pub struct HelloOpt {
         #[arg()]
         text: Vec<String>,
@@ -125,16 +137,20 @@ impl ValueEnum for Std {
         std: Std,
     {% endif %}
     }
-
+    impl HelloOpt {
+        pub fn text(&self) -> String {
+            self.text.join(" ")
+        }
+    }
     impl ArgsDispatcher<Error> for HelloOpt {
         fn dispatch(&self) -> Result<()> {
             {% if craft_value_enum %}
             match &self.std {
                 Std::Out => {
-                    println!("{}", &self.text.join(" "));
+                    println!("{}", &self.text());
                 },
                 Std::Err => {
-                    eprintln!("{}", &self.text.join(" "));
+                    eprintln!("{}", &self.text());
                 },
             }
             {% else %}
@@ -145,6 +161,6 @@ impl ValueEnum for Std {
     }
 {% endif %}
 
-fn main()  {
+fn main() -> Exit {
     Cli::main()
 }

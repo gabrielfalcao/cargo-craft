@@ -9,7 +9,7 @@ edition = "2024"
 clap = { version = "4.5.20", features = ["cargo", "derive", "env"] }
 tera = { version = "1.20.0", features = ["preserve_order"] }
 toml = { version = "0.8.19", features = ["preserve_order", "display"] }
-iocore = { version = "2.2.2" }
+iocore = "3.0.1"
 sanitation = { version = "1.0.0" }
 serde = { version = "1.0.213", features = ["derive"] }
 regex = "1.11.0"

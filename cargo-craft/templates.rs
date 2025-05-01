@@ -1,37 +1,28 @@
 use crate::cli::Craft;
+use crate::Result;
 use tera::{Context, Tera};
 
-pub fn tera(craft: &Craft) -> (Tera, Context) {
+pub fn tera(craft: &Craft) -> Result<(Tera, Context)> {
     let mut tera = Tera::default();
-    tera.add_raw_template("errors.rs", include_str!("./templates/errors.rs.tera"))
-        .unwrap();
-    tera.add_raw_template("lib.rs", include_str!("./templates/lib.rs.tera"))
-        .unwrap();
-    tera.add_raw_template("cli.rs", include_str!("./templates/lib_cli.rs.tera"))
-        .unwrap();
+    tera.add_raw_template("errors.rs", include_str!("./templates/errors.rs.tera"))?;
+    tera.add_raw_template("lib.rs", include_str!("./templates/lib.rs.tera"))?;
+    tera.add_raw_template("cli.rs", include_str!("./templates/lib_cli.rs.tera"))?;
     tera.add_raw_template(
         "{{package_name}}.rs",
         include_str!("./templates/{{package_name}}.rs.tera"),
-    )
-    .unwrap();
-    tera.add_raw_template("cli", include_str!("./templates/cli.rs.tera"))
-        .unwrap();
-    tera.add_raw_template("Cargo.toml", include_str!("./templates/Cargo.toml.tera"))
-        .unwrap();
-    tera.add_raw_template(".gitignore", include_str!("./templates/gitignore.tera"))
-        .unwrap();
+    )?;
+    tera.add_raw_template("cli", include_str!("./templates/cli.rs.tera"))?;
+    tera.add_raw_template("Cargo.toml", include_str!("./templates/Cargo.toml.tera"))?;
+    tera.add_raw_template(".gitignore", include_str!("./templates/gitignore.tera"))?;
     tera.add_raw_template(
         ".rustfmt.toml",
         include_str!("./templates/rustfmt.toml.tera"),
-    )
-    .unwrap();
+    )?;
     tera.add_raw_template(
         "rust-toolchain.toml",
         include_str!("./templates/rust-toolchain.toml.tera"),
-    )
-    .unwrap();
-    tera.add_raw_template("README.md", include_str!("./templates/README.md.tera"))
-        .unwrap();
+    )?;
+    tera.add_raw_template("README.md", include_str!("./templates/README.md.tera"))?;
 
     let mut context = Context::new();
     context.insert("crate_name", &craft.crate_name());
@@ -44,19 +35,28 @@ pub fn tera(craft: &Craft) -> (Tera, Context) {
     context.insert("crate_lib", &craft.lib_entry("lib.rs"));
     context.insert("craft_value_enum", &(craft.cli && craft.value_enum));
     context.insert("craft_subcommands", &(craft.cli && craft.subcommands));
-    (tera, context)
+    context.insert(
+        "craft_dependencies",
+        &craft
+            .deps()?
+            .iter()
+            .map(|dep| dep.to_tera())
+            .collect::<Vec<toml::Table>>(),
+    );
+    context.insert("craft_errors", &craft.error_types());
+    Ok((tera, context))
 }
-pub fn render(craft: &Craft, template_name: &str) -> Option<String> {
-    let (tera, context) = tera(craft);
+pub fn render(craft: &Craft, template_name: &str) -> Result<Option<String>> {
+    let (tera, context) = tera(craft)?;
     let rendered = tera
         .render(template_name, &context)
         .expect(&format!("render {}", template_name));
-    Some(rendered)
+    Ok(Some(rendered))
 }
-pub fn render_cli(craft: &Craft) -> Option<String> {
+pub fn render_cli(craft: &Craft) -> Result<Option<String>> {
     if craft.cli {
-        render(craft, "cli")
+        Ok(render(craft, "cli")?)
     } else {
-        None
+        Ok(None)
     }
 }

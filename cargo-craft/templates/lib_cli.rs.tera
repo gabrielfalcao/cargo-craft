@@ -1,4 +1,7 @@
-pub trait ParserDispatcher<E: std::error::Error>: clap::Parser {
+pub trait ParserDispatcher<E: std::error::Error>: clap::Parser
+where
+    crate::Exit: From<std::result::Result<(), E>>,
+{
     fn dispatch(&self) -> Result<(), E>;
     fn dispatch_cargo(&self) -> Result<(), E> {
         Ok(self.dispatch()?)
@@ -12,24 +15,20 @@ pub trait ParserDispatcher<E: std::error::Error>: clap::Parser {
         }
         Ok(())
     }
-    fn main() {
-        match Self::run() {
-            Ok(_) => {},
-            Err(error) => {
-                eprintln!("{}", error.to_string());
-                std::process::exit(1);
-            }
-        }
+    fn main() -> crate::Exit {
+        Self::run().into()
     }
     fn args() -> (Vec<String>, bool) {
         let args = iocore::env::args();
         let execname = iocore::Path::new(&args[0]).name();
-        let is_cargo = execname.ends_with("cargo");
+        let is_cargo = execname.ends_with("cargo") {% for entry in crate_binaries %}
+            || (execname.starts_with("cargo-") && execname.ends_with("{{entry["name"]}}"))
+        {% endfor %};
+
         let args = if is_cargo { args[1..].to_vec() } else { args.to_vec() };
         (args, is_cargo)
     }
 }
-{% if craft_subcommands %}
 pub trait SubcommandDispatcher<E: std::error::Error>: clap::Subcommand {
     fn dispatch(&self) -> Result<(), E>;
 }
@@ -37,4 +36,3 @@ pub trait SubcommandDispatcher<E: std::error::Error>: clap::Subcommand {
 pub trait ArgsDispatcher<E: std::error::Error>: clap::Args {
     fn dispatch(&self) -> Result<(), E>;
 }
-{% endif %}
