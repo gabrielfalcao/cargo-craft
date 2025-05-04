@@ -40,6 +40,7 @@ cbt() {
     (cd "$path" && cargo check --offline -q)
     (cd "$path" && cargo build --offline -q)
     (cd "$path" && cargo test --offline -q)
+    find "$path" -name errors.rs -exec cp {} $(basename "$path")-errors.rs \;
 }
 assert_file_exists() {
     path="$1"
@@ -58,7 +59,7 @@ done
 cargo check -q
 cargo install --offline --path .
 
-cargo_craft -sc tests-cli-subcommands
+cargo_craft -d serde_json -sc tests-cli-subcommands
 cbt tests-cli-subcommands
 assert_file_exists tests-cli-subcommands/Cargo.toml
 assert_file_exists tests-cli-subcommands/.gitignore
@@ -67,7 +68,7 @@ assert_file_exists tests-cli-subcommands/tests-cli-subcommands.rs
 exit_on_fail tests-cli-subcommands hello world
 
 
-cargo_craft -c tests-cli
+cargo_craft -d serde_json -c tests-cli
 cbt tests-cli
 assert_file_exists tests-cli/Cargo.toml
 assert_file_exists tests-cli/.gitignore
@@ -75,7 +76,7 @@ assert_file_exists tests-cli/.rustfmt.toml
 assert_file_exists tests-cli/tests-cli.rs
 exit_on_fail tests-cli "hello world"
 
-cargo_craft -Vc tests-cli-value-parser
+cargo_craft -d serde_json -Vc tests-cli-value-parser
 cbt tests-cli-value-parser
 assert_file_exists tests-cli-value-parser/Cargo.toml
 assert_file_exists tests-cli-value-parser/.gitignore
@@ -85,7 +86,7 @@ exit_on_fail tests-cli-value-parser hello world
 # exit_on_fail tests-cli-value-parser --std out "hello world"
 # exit_on_fail tests-cli-value-parser --std err "hello world"
 
-cargo_craft -cVs tests-cli-value-parser-subcommands
+cargo_craft -d serde_json -cVs tests-cli-value-parser-subcommands
 assert_file_exists tests-cli-value-parser-subcommands/Cargo.toml
 assert_file_exists tests-cli-value-parser-subcommands/.gitignore
 assert_file_exists tests-cli-value-parser-subcommands/.rustfmt.toml
@@ -95,7 +96,7 @@ exit_on_fail tests-cli-value-parser-subcommands hello world
 # exit_on_fail tests-cli-value-parser-subcommands --std err hello world
 
 
-cargo_craft tests-no-cli
+cargo_craft -d serde_json tests-no-cli
 cbt tests-no-cli
 assert_file_exists tests-no-cli/Cargo.toml
 assert_file_exists tests-no-cli/.gitignore
@@ -107,7 +108,7 @@ fi
 exit_on_fail tests-no-cli
 
 
-cargo_craft -c cargo-cli
+cargo_craft -d serde_json -c cargo-cli
 cbt cargo-cli
 assert_file_exists cargo-cli/Cargo.toml
 assert_file_exists cargo-cli/.gitignore

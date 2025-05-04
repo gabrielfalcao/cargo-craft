@@ -5,10 +5,11 @@ use crate::traceback;
 use clap::Parser;
 use iocore::Path;
 use toml::{Table, Value};
+use clap::CommandFactory;
 
 #[derive(Parser, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Craft {
-    #[arg(value_parser = valid_manifest_path)]
+    #[arg()]
     pub at: Path,
 
     #[arg(short, long, value_parser = valid_package_name)]
@@ -52,6 +53,9 @@ pub struct Craft {
 
     #[arg(short, long)]
     pub no_rollback: bool,
+
+    #[arg(short, long)]
+    pub force: bool,
 }
 pub trait ClapExecuter: Parser + std::fmt::Debug {
     fn run(args: &Self) -> Result<()>;
@@ -200,6 +204,23 @@ impl Craft {
         !self.no_rollback
     }
     pub fn go(&self) -> Result<()> {
+        if self.at.exists() {
+            if self.force {
+                self.at.delete()?;
+            }
+        } else {
+            let mut command = clap::Command::new("cargo-craft");
+            for arg in Craft::command().get_arguments() {
+                if arg.get_id().as_str() == "at" {
+                    command = command.arg(
+                        clap::Arg::new("at").value_parser(valid_manifest_path)
+                    );
+                } else {
+                    command = command.arg(arg.clone());
+                }
+            }
+            command.get_matches_from(Self::args());
+        };
         let manifest_path = self.manifest_path();
         let manifest_string = render(&self, "Cargo.toml").unwrap().unwrap();
         manifest_path.write(&manifest_string.as_bytes()).unwrap();
@@ -399,6 +420,10 @@ impl Dependency {
     pub fn to_tera(&self) -> Table {
         let mut dep = Table::new();
         dep.insert("name".to_string(), Value::String(self.name.to_string()));
+        dep.insert(
+            "package_name".to_string(),
+            Value::String(into_acceptable_package_name(self.name.as_str())),
+        );
         dep.insert(
             "features".to_string(),
             Value::Array(

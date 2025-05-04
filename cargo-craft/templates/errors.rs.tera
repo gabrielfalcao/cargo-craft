@@ -39,7 +39,7 @@ impl Error {
             Self::{{name}}Error(_) => "{{name}}Error",
             {% endfor %}
             {% for dependency in craft_dependencies %}
-            Self::{{dependency.pascal_case}}Error(_) => "{{name}}Error",
+            Self::{{dependency.pascal_case}}Error(_) => "{{dependency.pascal_case}}Error",
             {% endfor %}
 
         }
@@ -58,6 +58,13 @@ impl From<iocore::Error> for Error {
         Error::IOError(format!("{}", e))
     }
 }
+{% for dependency in craft_dependencies %}
+impl From<{{dependency.package_name}}::Error> for Error {
+    fn from(e: {{ dependency.package_name }}::Error) -> Self {
+        Error::{{dependency.pascal_case}}Error(format!("{}", e))
+    }
+}
+{% endfor %}
 pub type Result<T> = std::result::Result<T, Error>;
 
 
