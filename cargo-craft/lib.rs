@@ -1,9 +1,15 @@
 pub(crate) mod cli;
+pub(crate) mod errors;
 pub(crate) mod helpers;
 pub(crate) mod templates;
-pub(crate) mod errors;
 
-pub use cli::*;
-pub use helpers::*;
-pub use templates::*;
-pub use errors::*;
+pub use crate::helpers::{
+    acceptable_crate_name, capitalize_string, crate_name_from_path, extend_table,
+    into_acceptable_crate_name, into_acceptable_error_type_name, into_acceptable_name,
+    into_acceptable_package_name, package_name_from_string_or_path, path_to_entry_path, slug,
+    strip_ends, struct_name_from_package_name, to_pascal_case, valid_crate_name,
+    valid_manifest_path, valid_package_name, words,
+};
+pub use cli::{cargo_add, shell_command, ClapExecuter, Craft, Dependency};
+pub use errors::{Error, Result};
+pub use templates::{render, render_cli, tera};

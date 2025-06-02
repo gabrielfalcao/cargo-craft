@@ -1,59 +1,50 @@
 use crate::errors::Result;
-use crate::helpers::*;
+use crate::helpers::{
+    crate_name_from_path, extend_table, into_acceptable_error_type_name,
+    into_acceptable_package_name, package_name_from_string_or_path, path_to_entry_path,
+    struct_name_from_package_name, to_pascal_case, valid_crate_name, valid_manifest_path,
+    valid_package_name,
+};
+
 use crate::templates::{render, render_cli};
 use crate::traceback;
+use clap::CommandFactory;
 use clap::Parser;
 use iocore::Path;
 use toml::{Table, Value};
-use clap::CommandFactory;
 
 #[derive(Parser, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Craft {
-    #[arg()]
+    #[arg(help = "path to new directory containing new crate")]
     pub at: Path,
-
-    #[arg(short, long, value_parser = valid_package_name)]
+    #[arg(short = 'P', long, value_parser = valid_package_name, help = "defines crate name (optional: defaults to directory name of the AT argument")]
     pub package_name: Option<String>,
-
     #[arg(long, default_value = "0.0.1")]
     pub version: String,
-
     #[arg(short, long)]
     pub dep: Vec<String>,
-
     #[arg(short, long)]
     pub cli: bool,
-
     #[arg(short, long)]
     pub bin: Vec<String>,
-
-    #[arg(long)]
+    #[arg(short, long)]
     pub lib_path: Option<String>,
-
     #[arg(long, default_value = ".")]
     pub bin_path: String,
-
     #[arg(short = 'V', long)]
     pub value_enum: bool,
-
     #[arg(short, long)]
     pub subcommands: bool,
-
     #[arg(short, long)]
     pub verbose: bool,
-
     #[arg(short, long, help = "cargo add --quiet")]
     pub quiet_add: bool,
-
     #[arg(short, long)]
     pub offline: bool,
-
     #[arg(short = 'e', long)]
     pub add_error_type: Vec<String>,
-
     #[arg(short, long)]
     pub no_rollback: bool,
-
     #[arg(short, long)]
     pub force: bool,
 }
@@ -75,30 +66,24 @@ pub trait ClapExecuter: Parser + std::fmt::Debug {
         args
     }
 }
-
 impl Craft {
     pub fn crate_name(&self) -> String {
         crate_name_from_path(&self.at).unwrap()
     }
-
     pub fn package_name(&self) -> String {
         package_name_from_string_or_path(self.package_name.clone(), &self.at).unwrap()
     }
-
     pub fn struct_name(&self) -> String {
         struct_name_from_package_name(&self.package_name())
     }
-
     pub fn version(&self) -> String {
         self.version.clone()
     }
-
     pub fn lib_path(&self) -> Path {
         crate_name_from_path(&self.lib_path.clone().unwrap_or_else(|| self.crate_name()))
             .unwrap()
             .into()
     }
-
     pub fn lib_options() -> Table {
         let mut options = Table::new();
         for falsy in ["doctest", "bench"] {
@@ -106,7 +91,6 @@ impl Craft {
         }
         options
     }
-
     pub fn bin_options() -> Table {
         let mut options = Craft::lib_options();
         for falsy in ["doc"] {
@@ -114,7 +98,6 @@ impl Craft {
         }
         options
     }
-
     pub fn bin_names(&self) -> Vec<String> {
         let mut binaries = self.bin.clone();
         if !binaries.contains(&self.crate_name()) {
@@ -122,7 +105,6 @@ impl Craft {
         }
         binaries
     }
-
     pub fn bin_entries(&self) -> Vec<Table> {
         let mut entries = Vec::<Table>::new();
         for name in self.bin_names() {
@@ -141,7 +123,6 @@ impl Craft {
         }
         entries
     }
-
     pub fn git_entries(&self) -> Vec<Table> {
         let mut entries = Vec::<Table>::new();
         for name in vec![
@@ -160,7 +141,6 @@ impl Craft {
         }
         entries
     }
-
     pub fn lib_entry(&self, path: impl std::fmt::Display) -> Option<Table> {
         let mut entry = Table::new();
         entry.insert("name".to_string(), Value::String(self.package_name()));
@@ -170,14 +150,12 @@ impl Craft {
         );
         Some(extend_table(&Craft::bin_options(), &entry))
     }
-
     pub fn path(&self) -> Path {
         self.at.clone()
     }
     pub fn path_to(&self, to: impl std::fmt::Display) -> Path {
         self.path().join(to.to_string())
     }
-
     pub fn manifest_path(&self) -> Path {
         self.path_to("Cargo.toml")
     }
@@ -212,9 +190,7 @@ impl Craft {
             let mut command = clap::Command::new("cargo-craft");
             for arg in Craft::command().get_arguments() {
                 if arg.get_id().as_str() == "at" {
-                    command = command.arg(
-                        clap::Arg::new("at").value_parser(valid_manifest_path)
-                    );
+                    command = command.arg(clap::Arg::new("at").value_parser(valid_manifest_path));
                 } else {
                     command = command.arg(arg.clone());
                 }
@@ -340,9 +316,9 @@ impl ClapExecuter for Craft {
         match args.go() {
             Ok(()) => Ok(()),
             Err(e) => {
-                eprintln!("error {}", e);
+                println!("error {}", e);
                 if could_rollback {
-                    eprintln!("rolling back {}", args.path());
+                    println!("rolling back {}", args.path());
                     args.path().delete()?;
                 }
                 Ok(())
@@ -367,7 +343,7 @@ pub fn shell_command(
     verbose: bool,
 ) -> Result<i32> {
     if verbose {
-        eprintln!("{}", &command.to_string())
+        println!("{}", &command.to_string())
     }
     Ok(iocore::shell_command(command, current_dir)?)
 }
@@ -468,6 +444,7 @@ mod test_craft {
             offline: true,
             no_rollback: true,
             add_error_type: Vec::new(),
+            force: true,
         }
     }
     #[test]
