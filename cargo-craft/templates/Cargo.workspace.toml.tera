@@ -8,12 +8,6 @@ license = "MIT"
 edition = "2021"
 autoexamples = false
 autobenches = false
-targets = [
-    # "aarch64-apple-darwin",
-    # "x86_64-unknown-linux-gnu",
-    # "aarch64-unknown-linux-gnu",
-]
-# categories = [] # https://crates.io/category_slugs
 
 {% if craft_lib %}
 [lib]

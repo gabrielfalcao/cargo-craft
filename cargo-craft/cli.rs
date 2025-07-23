@@ -6,14 +6,14 @@ use crate::helpers::{
     valid_package_name,
 };
 
-use crate::templates::{render, render_cli};
+use crate::templates::{render, render_cli, render_info_string};
 use crate::traceback;
 use clap::CommandFactory;
 use clap::Parser;
 use iocore::Path;
 use toml::{Table, Value};
 
-#[derive(Parser, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Parser, Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct Craft {
     #[arg(help = "path to new directory containing new crate")]
     pub at: Path,
@@ -25,6 +25,8 @@ pub struct Craft {
     pub dep: Vec<String>,
     #[arg(short, long)]
     pub cli: bool,
+    #[arg(short, long, default_value = "{{ crate_name }}")]
+    pub default_bin_name: String,
     #[arg(short, long)]
     pub bin: Vec<String>,
     #[arg(short, long)]
@@ -58,7 +60,10 @@ pub trait ClapExecuter: Parser + std::fmt::Debug {
     fn args() -> Vec<String> {
         let args = iocore::env::args();
         let execname = Path::new(&args[0]).name();
-        let args = if execname.ends_with("cargo") || execname.ends_with("cargo-craft") {
+        let args = if execname.ends_with("cargo")
+            || execname.ends_with("cargo-craft-exec")
+            || execname.ends_with("cargo-craft")
+        {
             args[1..].to_vec()
         } else {
             args.to_vec()
@@ -100,9 +105,13 @@ impl Craft {
     }
     pub fn bin_names(&self) -> Vec<String> {
         let mut binaries = self.bin.clone();
-        if !binaries.contains(&self.crate_name()) {
-            binaries.push(self.crate_name());
+        if !binaries.contains(&self.crate_name()) || binaries.is_empty() {
+            binaries.push(
+                self.default_bin_name()
+                    .unwrap_or_else(|_| self.crate_name()),
+            );
         }
+
         binaries
     }
     pub fn bin_entries(&self) -> Vec<Table> {
@@ -158,6 +167,9 @@ impl Craft {
     }
     pub fn manifest_path(&self) -> Path {
         self.path_to("Cargo.toml")
+    }
+    pub fn default_bin_name(&self) -> Result<String> {
+        Ok(render_info_string(&self.clone(), &self.default_bin_name)?)
     }
     pub fn deps(&self) -> Result<Vec<Dependency>> {
         let mut deps = Vec::new();
@@ -361,6 +373,9 @@ pub struct Dependency {
 
     #[arg(long)]
     pub build: bool,
+
+    #[arg(long)]
+    pub optional: bool,
 }
 impl std::fmt::Display for Dependency {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -370,6 +385,9 @@ impl std::fmt::Display for Dependency {
         }
         if self.build {
             args.push("--build".to_string());
+        }
+        if self.optional {
+            args.push("--optional".to_string());
         }
         let features = self.features();
         if features.len() > 0 {
@@ -443,6 +461,7 @@ mod test_craft {
             quiet_add: true,
             offline: true,
             no_rollback: true,
+            default_bin_name: "main".to_string(),
             add_error_type: Vec::new(),
             force: true,
         }
@@ -474,18 +493,21 @@ mod test_craft {
                     features: Some("blocking,deflate".to_string()),
                     dev: false,
                     build: false,
+                    optional: false,
                 },
                 Dependency {
                     name: "k9".to_string(),
                     features: None,
                     dev: true,
                     build: false,
+                    optional: false,
                 },
                 Dependency {
                     name: "clap-builder".to_string(),
                     features: None,
                     dev: false,
                     build: true,
+                    optional: false,
                 }
             ]
         );

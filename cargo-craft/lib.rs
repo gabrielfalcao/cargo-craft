@@ -1,7 +1,6 @@
 pub(crate) mod cli;
 pub(crate) mod errors;
 pub(crate) mod helpers;
-pub(crate) mod templates;
 
 pub use crate::helpers::{
     acceptable_crate_name, capitalize_string, crate_name_from_path, extend_table,
@@ -12,4 +11,6 @@ pub use crate::helpers::{
 };
 pub use cli::{cargo_add, shell_command, ClapExecuter, Craft, Dependency};
 pub use errors::{Error, Result};
-pub use templates::{render, render_cli, tera};
+
+pub(crate) mod templates;
+pub use templates::{render, render_cli, render_info_string, tera, tera_info};
