@@ -1,0 +1,45 @@
+fn main() {
+    let argv = require_argv();
+    let argc = argv.len();
+
+    println!("arg count: {argc}");
+    println!("arg list: [{}]", argv.join(", "))
+}
+fn require_argv() -> Vec<String> {
+    let (_, args) = parse_args();
+    if args.is_empty() {
+        usage();
+        std::process::exit(101);
+    }
+    args
+}
+fn parse_args() -> (String, Vec<String>) {
+    let args = std::env::args().into_iter().collect::<Vec<String>>();
+    let prog = args[0].to_string();
+    let prog = std::path::PathBuf::from(&prog)
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| prog.to_string());
+    (
+        prog,
+        args[1..]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<String>>(),
+    )
+}
+
+fn usage() {
+    let progname = prog();
+    eprintln!("USAGE: {progname} [arguments]");
+}
+
+fn prog() -> String {
+    std::env::args()
+        .next()
+        .map(|prog| {
+            prog.split(std::path::MAIN_SEPARATOR_STR)
+                .fold(String::new(), |_, arg| arg.to_string())
+        })
+        .unwrap()
+}

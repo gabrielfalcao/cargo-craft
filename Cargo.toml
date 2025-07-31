@@ -20,13 +20,12 @@ iocore = "3.0.3"
 
 [lib]
 name = "cargo_craft"
-path = "cargo-craft/lib.rs"
+path = "src/lib.rs"
 
 [[bin]]
 name = "cargo-craft-exec"
-path = "cargo-craft.rs"
-
+path = "src/main.rs"
 
 [[bin]]
 name = "cargo-craft"
-path = "cargo-craft.rs"
+path = "src/main.rs"

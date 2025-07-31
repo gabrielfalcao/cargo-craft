@@ -59,6 +59,15 @@ done
 cargo check -q
 cargo install --offline --path .
 
+cargo_craft -c --bare cargo-cli-bare
+cbt cargo-cli-bare
+assert_file_exists cargo-cli-bare/Cargo.toml
+assert_file_exists cargo-cli-bare/.gitignore
+assert_file_exists cargo-cli-bare/.rustfmt.toml
+assert_file_exists cargo-cli-bare/cli.rs
+assert_file_exists cargo-cli-bare/main.rs
+exit_on_fail cargo-cli-bare "hello world"
+
 cargo_craft -d serde_json -sc tests-cli-subcommands
 cbt tests-cli-subcommands
 assert_file_exists tests-cli-subcommands/Cargo.toml

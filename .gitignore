@@ -4,3 +4,6 @@ tests/*
 tests*cli*
 
 .logs/
+
+cargo-cli-bare
+

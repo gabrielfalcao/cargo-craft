@@ -5,6 +5,8 @@ use tera::{Context, Tera};
 pub fn tera_info(craft: &Craft) -> Result<(Tera, Context)> {
     let mut tera = Tera::default();
     tera.add_raw_template("errors.rs", include_str!("./templates/errors.rs.tera"))?;
+    tera.add_raw_template("bare.main.rs", include_str!("./templates/bare.main.rs.tera"))?;
+    tera.add_raw_template("bare.mod.cli.rs", include_str!("./templates/bare.mod.cli.rs.tera"))?;
     tera.add_raw_template("lib.rs", include_str!("./templates/lib.rs.tera"))?;
     tera.add_raw_template("cli.rs", include_str!("./templates/lib_cli.rs.tera"))?;
     tera.add_raw_template(

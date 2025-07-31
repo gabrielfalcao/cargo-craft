@@ -17,36 +17,55 @@ use toml::{Table, Value};
 pub struct Craft {
     #[arg(help = "path to new directory containing new crate")]
     pub at: Path,
+
     #[arg(short = 'P', long, value_parser = valid_package_name, help = "defines crate name (optional: defaults to directory name of the AT argument")]
     pub package_name: Option<String>,
+
     #[arg(long, default_value = "0.0.1")]
     pub version: String,
+
     #[arg(short, long)]
     pub dep: Vec<String>,
+
     #[arg(short, long)]
     pub cli: bool,
+
+    #[arg(long = "bare", requires="cli", conflicts_with_all=["subcommands", "add_error_type", "value_enum", "default_bin_name", "bin"])]
+    pub cli_barebones: bool,
+
     #[arg(short, long, default_value = "{{ crate_name }}")]
     pub default_bin_name: String,
+
     #[arg(short, long)]
     pub bin: Vec<String>,
+
     #[arg(short, long)]
     pub lib_path: Option<String>,
+
     #[arg(long, default_value = ".")]
     pub bin_path: String,
+
     #[arg(short = 'V', long)]
     pub value_enum: bool,
+
     #[arg(short, long)]
     pub subcommands: bool,
+
     #[arg(short, long)]
     pub verbose: bool,
+
     #[arg(short, long, help = "cargo add --quiet")]
     pub quiet_add: bool,
+
     #[arg(short, long)]
     pub offline: bool,
+
     #[arg(short = 'e', long)]
     pub add_error_type: Vec<String>,
+
     #[arg(short, long)]
     pub no_rollback: bool,
+
     #[arg(short, long)]
     pub force: bool,
 }
@@ -214,31 +233,44 @@ impl Craft {
         manifest_path.write(&manifest_string.as_bytes()).unwrap();
         println!("wrote {}", manifest_path);
 
-        let mut ttargets = vec![
-            (
-                render(&self, "lib.rs").unwrap(),
-                vec![self.lib_entry("lib.rs")],
-            ),
-            (
-                render(&self, "cli.rs").unwrap(),
-                vec![self.lib_entry("cli.rs")],
-            ),
-            (
-                render(&self, "{{package_name}}.rs").unwrap(),
-                vec![self.lib_entry(format!("{}.rs", self.package_name()))],
-            ),
-            (
-                render(&self, "errors.rs").unwrap(),
-                vec![self.lib_entry("errors.rs")],
-            ),
-            (
-                render_cli(&self).unwrap(),
-                self.bin_entries()
-                    .iter()
-                    .map(|entry| Some(entry.clone()))
-                    .collect::<Vec<Option<Table>>>(),
-            ),
-        ];
+        let mut ttargets = if !self.cli_barebones {
+            vec![
+                (
+                    render(&self, "lib.rs").unwrap(),
+                    vec![self.lib_entry("lib.rs")],
+                ),
+                (
+                    render(&self, "cli.rs").unwrap(),
+                    vec![self.lib_entry("cli.rs")],
+                ),
+                (
+                    render(&self, "{{package_name}}.rs").unwrap(),
+                    vec![self.lib_entry(format!("{}.rs", self.package_name()))],
+                ),
+                (
+                    render(&self, "errors.rs").unwrap(),
+                    vec![self.lib_entry("errors.rs")],
+                ),
+                (
+                    render_cli(&self).unwrap(),
+                    self.bin_entries()
+                        .iter()
+                        .map(|entry| Some(entry.clone()))
+                        .collect::<Vec<Option<Table>>>(),
+                ),
+            ]
+        } else {
+            vec![
+                (
+                    render(&self, "bare.main.rs").unwrap(),
+                    vec![self.lib_entry("main.rs")],
+                ),
+                (
+                    render(&self, "bare.mod.cli.rs").unwrap(),
+                    vec![self.lib_entry("cli.rs")],
+                ),
+            ]
+        };
         let git_entries = self.git_entries().into_iter().map(|entry| {
             let name = entry
                 .get("name")
