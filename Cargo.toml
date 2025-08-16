@@ -2,7 +2,7 @@ cargo-features = ["per-package-target"]
 
 [package]
 name = "cargo-craft"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2024"
 
 [dependencies]
@@ -21,10 +21,6 @@ iocore = "3.0.3"
 [lib]
 name = "cargo_craft"
 path = "src/lib.rs"
-
-[[bin]]
-name = "cargo-craft-exec"
-path = "src/main.rs"
 
 [[bin]]
 name = "cargo-craft"

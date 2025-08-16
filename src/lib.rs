@@ -9,7 +9,7 @@ pub use crate::helpers::{
     strip_ends, struct_name_from_package_name, to_pascal_case, valid_crate_name,
     valid_manifest_path, valid_package_name, words,
 };
-pub use cli::{cargo_add, shell_command, ClapExecuter, Craft, Dependency};
+pub use cli::{ClapExecuter, Craft, Dependency};
 pub use errors::{Error, Result};
 
 pub(crate) mod templates;

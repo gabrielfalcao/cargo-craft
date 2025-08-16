@@ -1,16 +1,17 @@
-use crate::errors::Result;
+use crate::errors::{Error, Result};
 use crate::helpers::{
     crate_name_from_path, extend_table, into_acceptable_error_type_name,
     into_acceptable_package_name, package_name_from_string_or_path, path_to_entry_path,
     struct_name_from_package_name, to_pascal_case, valid_crate_name, valid_manifest_path,
     valid_package_name,
 };
-
 use crate::templates::{render, render_cli, render_info_string};
 use crate::traceback;
 use clap::CommandFactory;
 use clap::Parser;
 use iocore::Path;
+use std::cmp::PartialEq;
+use std::fmt::{Display, Formatter};
 use toml::{Table, Value};
 
 #[derive(Parser, Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -169,7 +170,7 @@ impl Craft {
         }
         entries
     }
-    pub fn lib_entry(&self, path: impl std::fmt::Display) -> Option<Table> {
+    pub fn lib_entry(&self, path: impl Display) -> Option<Table> {
         let mut entry = Table::new();
         entry.insert("name".to_string(), Value::String(self.package_name()));
         entry.insert(
@@ -181,7 +182,7 @@ impl Craft {
     pub fn path(&self) -> Path {
         self.at.clone()
     }
-    pub fn path_to(&self, to: impl std::fmt::Display) -> Path {
+    pub fn path_to(&self, to: impl Display) -> Path {
         self.path().join(to.to_string())
     }
     pub fn manifest_path(&self) -> Path {
@@ -212,27 +213,7 @@ impl Craft {
     pub fn rollback_on_error(&self) -> bool {
         !self.no_rollback
     }
-    pub fn go(&self) -> Result<()> {
-        if self.at.exists() {
-            if self.force {
-                self.at.delete()?;
-            }
-        } else {
-            let mut command = clap::Command::new("cargo-craft");
-            for arg in Craft::command().get_arguments() {
-                if arg.get_id().as_str() == "at" {
-                    command = command.arg(clap::Arg::new("at").value_parser(valid_manifest_path));
-                } else {
-                    command = command.arg(arg.clone());
-                }
-            }
-            command.get_matches_from(Self::args());
-        };
-        let manifest_path = self.manifest_path();
-        let manifest_string = render(&self, "Cargo.toml").unwrap().unwrap();
-        manifest_path.write(&manifest_string.as_bytes()).unwrap();
-        println!("wrote {}", manifest_path);
-
+    pub fn render_templates(&self) -> Result<Vec<(String, Vec<Option<Table>>)>> {
         let mut ttargets = if !self.cli_barebones {
             vec![
                 (
@@ -285,6 +266,10 @@ impl Craft {
             .filter(|(path, _)| path.is_some())
             .map(|(path, entries)| (path.clone().unwrap(), entries.clone()))
             .collect::<Vec<(String, Vec<Option<Table>>)>>();
+        Ok(ttargets)
+    }
+    pub fn render_and_write_templates(&self) -> Result<Vec<Path>> {
+        let ttargets = self.render_templates()?;
         let mut written_paths = Vec::<Path>::new();
         for (template, target) in ttargets {
             for target in target
@@ -295,37 +280,81 @@ impl Craft {
                 .map(|path| path.unwrap())
                 .collect::<Vec<Path>>()
             {
-                match self.path_to(target).write(&template.as_bytes()) {
+                let path = self.path_to(target);
+                match path.write(&template.as_bytes()) {
                     Ok(path) => {
-                        println!("wrote {}", path);
+                        println!("wrote {path}");
                         written_paths.push(path);
                     }
-                    Err(err) => panic!("{}", err),
+                    Err(error) => {
+                        return Err(Error::IOError(format!("error writing {path}: {error}")))
+                    }
                 }
             }
         }
+        Ok(written_paths)
+    }
+    pub fn rustfmt_paths(&self, written_paths: &Vec<Path>) -> Result<()> {
         for target in written_paths {
             if target.extension().unwrap_or_default().ends_with("rs") {
-                shell_command(
-                    format!("rustfmt {}", target.relative_to_cwd()),
-                    Path::cwd(),
-                    self.verbose,
-                )?;
+                self.shell_command(format!("rustfmt {}", target.relative_to_cwd()), Path::cwd())?;
             }
         }
-        cargo_add("serde -F derive", self.path(), self.verbose, self.quiet_add)?;
-        cargo_add("iocore", self.path(), self.verbose, self.quiet_add)?;
+        Ok(())
+    }
+    pub fn cargo_add_dependencies(&self) -> Result<()> {
         if self.cli || self.bin_entries().len() > 0 {
-            cargo_add(
-                "clap -F derive,env,string,unicode,wrap_help",
-                self.path(),
-                self.verbose,
-                self.quiet_add,
-            )?;
+            self.cargo_add("clap -F derive,env,string,unicode,wrap_help", self.path())?;
         }
+        self.cargo_add("iocore", self.path())?;
         for dep in self.deps()? {
-            cargo_add(&dep, self.path(), self.verbose, self.quiet_add)?;
+            self.cargo_add(&dep, self.path())?;
         }
+        Ok(())
+    }
+    pub fn run_git_ops(&self) -> Result<()> {
+        self.shell_command("git init", self.path())?;
+        self.shell_command("git add .", self.path())?;
+        Ok(())
+    }
+    pub fn go(&self) -> Result<()> {
+        if self.at.exists() {
+            if self.force {
+                self.at.delete()?;
+            }
+        } else {
+            let mut command = clap::Command::new("cargo-craft");
+            for arg in Craft::command().get_arguments() {
+                if arg.get_id().as_str() == "at" {
+                    command = command.arg(clap::Arg::new("at").value_parser(valid_manifest_path));
+                } else {
+                    command = command.arg(arg.clone());
+                }
+            }
+            command.get_matches_from(Self::args());
+        };
+        let manifest_path = self.manifest_path();
+        let manifest_string = render(&self, "Cargo.toml").unwrap().unwrap();
+        manifest_path.write(&manifest_string.as_bytes()).unwrap();
+        println!("wrote {}", manifest_path);
+
+        let written_paths = self.render_and_write_templates()?;
+        self.rustfmt_paths(&written_paths)?;
+
+        self.cargo_add_dependencies()?;
+
+        self.run_git_ops()?;
+
+        for subcommand in ["check", "build", "test"] {
+            self.call_cargo_subcommand(subcommand)?;
+        }
+
+        Ok(())
+    }
+    pub fn call_cargo_subcommand<T: Display + for<'a> PartialEq<&'a str>>(
+        &self,
+        subcommand: T,
+    ) -> Result<()> {
         let mut cargo_command_args = Vec::<String>::new();
         if self.offline {
             cargo_command_args.push("--offline".to_string());
@@ -333,24 +362,19 @@ impl Craft {
         if !self.verbose {
             cargo_command_args.push("--quiet".to_string());
         }
-        for subcommand in ["check", "build", "test"] {
-            let command = format!("cargo {} {}", subcommand, cargo_command_args.join(" "));
-            match shell_command(&command, self.path(), self.verbose)? {
-                0 => {}
-                exit_code => {
-                    let error = format!("{:#?} failed with {}", &command, exit_code);
-                    if subcommand == "check" {
-                        return Err(crate::Error::ShellCommandError(error));
-                    } else {
-                        std::process::exit(1);
-                    }
+        let command = format!("cargo {} {}", subcommand, cargo_command_args.join(" "));
+        match self.shell_command(&command, self.path())? {
+            0 => Ok(()),
+            exit_code => {
+                let error = format!("{:#?} failed with {}", &command, exit_code);
+                if subcommand == "check" {
+                    return Err(crate::Error::ShellCommandError(error));
+                } else {
+                    eprintln!("command failed: `{command}'");
+                    std::process::exit(1);
                 }
             }
         }
-        shell_command("git init", self.path(), self.verbose)?;
-        shell_command("git add .", self.path(), self.verbose)?;
-
-        Ok(())
     }
 }
 
@@ -370,26 +394,31 @@ impl ClapExecuter for Craft {
         }
     }
 }
+impl Craft {
+    pub fn cargo_add(&self, dep: impl Display, current_dir: Path) -> Result<()> {
+        let mut opts = Vec::<String>::new();
+        if self.quiet_add {
+            opts.push("-q".to_string());
+        }
+        if self.offline {
+            opts.push("--offline".to_string());
+        }
+        opts.push(dep.to_string());
 
-pub fn cargo_add(
-    dep: impl std::fmt::Display,
-    current_dir: Path,
-    verbose: bool,
-    quiet: bool,
-) -> Result<()> {
-    let command = format!("cargo add {}{}", if quiet { " -q " } else { "" }, dep);
-    shell_command(&command, current_dir, verbose)?;
-    Ok(())
-}
-pub fn shell_command(
-    command: impl std::fmt::Display,
-    current_dir: impl Into<Path>,
-    verbose: bool,
-) -> Result<i32> {
-    if verbose {
-        println!("{}", &command.to_string())
+        let command = format!("cargo add {}", opts.join(" "));
+        self.shell_command(&command, current_dir)?;
+        Ok(())
     }
-    Ok(iocore::shell_command(command, current_dir)?)
+    pub fn shell_command(
+        &self,
+        command: impl Display,
+        current_dir: impl Into<Path>,
+    ) -> Result<i32> {
+        if self.verbose {
+            println!("{}", &command.to_string())
+        }
+        Ok(iocore::shell_command(command, current_dir)?)
+    }
 }
 
 #[derive(Parser, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -409,8 +438,8 @@ pub struct Dependency {
     #[arg(long)]
     pub optional: bool,
 }
-impl std::fmt::Display for Dependency {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl Display for Dependency {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let mut args = vec![self.name.to_string()];
         if self.dev {
             args.push("--dev".to_string());
