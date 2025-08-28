@@ -8,12 +8,17 @@ license = "MIT OR Apache-2.0"
 edition = "2024"
 autoexamples = false
 autobenches = false
+# categories = [] # https://crates.io/category_slugs
+{% for entry in crate_binaries %}
+# default-run = ""
+{% endfor %}
+
+[package.metadata]
 targets = [
     # "aarch64-apple-darwin",
     # "x86_64-unknown-linux-gnu",
     # "aarch64-unknown-linux-gnu",
 ]
-# categories = [] # https://crates.io/category_slugs
 
 {% if craft_lib %}
 [lib]
