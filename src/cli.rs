@@ -34,7 +34,7 @@ pub struct Craft {
     #[arg(long = "bare", requires="cli", conflicts_with_all=["subcommands", "add_error_type", "value_enum", "default_bin_name", "bin"])]
     pub cli_barebones: bool,
 
-    #[arg(short, long, default_value = "{{ crate_name }}")]
+    #[arg(short = 'm', long, default_value = "{{ crate_name }}")]
     pub default_bin_name: String,
 
     #[arg(short, long)]
@@ -518,6 +518,7 @@ mod test_craft {
             bin_path: ".".to_string(),
             value_enum: false,
             subcommands: false,
+            cli_barebones: false,
             verbose: false,
             quiet_add: true,
             offline: true,

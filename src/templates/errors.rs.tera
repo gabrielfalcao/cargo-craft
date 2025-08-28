@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Error {
     IOError(String),
+    RuntimeError(String),
     {% for name in craft_errors %}
     {{name}}Error(String),
     {% endfor %}
@@ -19,12 +20,13 @@ impl Display for Error {
             "{}: {}",
             self.variant(),
             match self {
-                Self::IOError(e) => e.to_string(),
+                Error::IOError(e) => e.to_string(),
+                Error::RuntimeError(e) => e.to_string(),
                 {% for name in craft_errors %}
-                Self::{{name}}Error(e) => e.to_string(),
+                Error::{{name}}Error(e) => e.to_string(),
                 {% endfor %}
                 {% for dependency in craft_dependencies %}
-                Self::{{dependency.pascal_case}}Error(e) => e.to_string(),
+                Error::{{dependency.pascal_case}}Error(e) => e.to_string(),
                 {% endfor %}
             }
         )
@@ -35,11 +37,12 @@ impl Error {
     pub fn variant(&self) -> String {
         match self {
             Error::IOError(_) => "IOError",
+            Error::RuntimeError(_) => "RuntimeError",
             {% for name in craft_errors %}
-            Self::{{name}}Error(_) => "{{name}}Error",
+            Error::{{name}}Error(_) => "{{name}}Error",
             {% endfor %}
             {% for dependency in craft_dependencies %}
-            Self::{{dependency.pascal_case}}Error(_) => "{{dependency.pascal_case}}Error",
+            Error::{{dependency.pascal_case}}Error(_) => "{{dependency.pascal_case}}Error",
             {% endfor %}
 
         }
