@@ -10,7 +10,7 @@ pub use crate::helpers::{
     valid_manifest_path, valid_package_name, words,
 };
 pub use cli::{ClapExecuter, Craft, Dependency};
-pub use errors::{Error, Result};
+pub use errors::{Error, Result, ExecutionResult};
 
 pub(crate) mod templates;
 pub use templates::{render, render_cli, render_info_string, tera, tera_info};

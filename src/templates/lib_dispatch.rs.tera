@@ -21,12 +21,16 @@ where
     fn args() -> (Vec<String>, bool) {
         let args = iocore::env::args();
         let execname = iocore::Path::new(&args[0]).name();
-        let is_cargo = execname.ends_with("cargo") {% for entry in crate_binaries %}
+        {% if is_cargo_command %}
+        let shift_args = execname == "cargo";
+        let is_cargo = execname == "cargo" {% for entry in crate_binaries %}{% if entry.is_cargo %}
             || (execname.starts_with("cargo-") && execname.ends_with("{{entry["name"]}}"))
-        {% endfor %};
-
-        let args = if is_cargo { args[1..].to_vec() } else { args.to_vec() };
+        {% endif %}{% endfor %};
+        let args = if shift_args { args[1..].to_vec() } else { args.to_vec() };
         (args, is_cargo)
+        {% else %}
+        (args, false)
+        {% endif %}
     }
 }
 pub  trait SubcommandDispatcher<E: std::error::Error>: clap::Subcommand {

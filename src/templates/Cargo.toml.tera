@@ -1,17 +1,17 @@
 [package]
 name = "{{ crate_name }}"
 version = "{{ crate_version }}"
-description = "{{ crate_name }} {% if craft_cli %}command-line{% else %}library{% endif %}"
+description = "{% if package_description %}{{ package_description }}{% else %}{{ crate_name }} {% if craft_cli %}command-line{% else %}library{% endif %}{% endif %}"
 readme = "README.md"
 homepage = "https://crates.io/crates/{{ crate_name }}"
 license = "MIT OR Apache-2.0"
 edition = "2024"
 autoexamples = false
 autobenches = false
-# categories = [] # https://crates.io/category_slugs
-{% for entry in crate_binaries %}
-# default-run = ""
+{% for entry in crate_binaries %}# default-run = "{{ entry["name"] }}"
 {% endfor %}
+# categories = [] # https://crates.io/category_slugs
+
 
 [package.metadata]
 targets = [

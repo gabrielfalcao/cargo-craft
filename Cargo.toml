@@ -2,7 +2,7 @@ cargo-features = ["per-package-target"]
 
 [package]
 name = "cargo-craft"
-version = "0.0.2"
+version = "0.1.0"
 edition = "2024"
 
 [dependencies]
@@ -13,6 +13,8 @@ iocore = "3.0.3"
 sanitation = { version = "1.0.0" }
 serde = { version = "1.0.213", features = ["derive"] }
 regex = "1.11.0"
+chrono = { version = "0.4.41", features = ["serde"] }
+serde_json = "1.0.142"
 
 [build-dependencies]
 iocore = "3.0.3"
@@ -25,3 +27,7 @@ path = "src/lib.rs"
 [[bin]]
 name = "cargo-craft"
 path = "src/main.rs"
+
+[dev-dependencies]
+iocore-test = "3.1.0"
+k9 = "0.12.0"

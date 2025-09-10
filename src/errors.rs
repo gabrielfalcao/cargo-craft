@@ -1,28 +1,19 @@
-use serde::ser::SerializeStruct;
-use serde::{Serialize, Serializer};
-use std::fmt::Display;
+use crate::ClapExecuter;
+use serde::{Deserialize, Serialize};
 use std::error::Error as StdErr;
+use std::fmt::Display;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Error {
     ShellCommandError(String),
     IOError(String),
     SerializationError(String),
     ParseError(String),
     TemplateError(String),
+    JsonError(String),
+    RuntimeError(String),
 }
 
-impl Serialize for Error {
-    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut s = serializer.serialize_struct("Error", 2)?;
-        s.serialize_field("variant", &self.variant())?;
-        s.serialize_field("message", &format!("{}", self))?;
-        s.end()
-    }
-}
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
@@ -30,11 +21,13 @@ impl Display for Error {
             "{}: {}",
             self.variant(),
             match self {
-                Self::ShellCommandError(e) => e.to_string(),
-                Self::IOError(e) => e.to_string(),
-                Self::SerializationError(e) => e.to_string(),
-                Self::ParseError(e) => e.to_string(),
-                Self::TemplateError(e) => e.to_string(),
+                Error::ShellCommandError(e) => e.to_string(),
+                Error::IOError(e) => e.to_string(),
+                Error::SerializationError(e) => e.to_string(),
+                Error::ParseError(e) => e.to_string(),
+                Error::TemplateError(e) => e.to_string(),
+                Error::JsonError(e) => e.to_string(),
+                Error::RuntimeError(e) => e.to_string(),
             }
         )
     }
@@ -48,6 +41,8 @@ impl Error {
             Error::SerializationError(_) => "SerializationError",
             Error::ParseError(_) => "ParseError",
             Error::TemplateError(_) => "TemplateError",
+            Error::JsonError(_) => "JsonError",
+            Error::RuntimeError(_) => "RuntimeError",
         }
         .to_string()
     }
@@ -71,7 +66,16 @@ impl From<clap::Error> for Error {
 }
 impl From<tera::Error> for Error {
     fn from(e: tera::Error) -> Self {
-        Error::TemplateError(format!("{}{}", e, e.source().map(|e|format!(": {}", e)).unwrap_or_default()))
+        Error::TemplateError(format!(
+            "{}{}",
+            e,
+            e.source().map(|e| format!(": {}", e)).unwrap_or_default()
+        ))
+    }
+}
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        Error::JsonError(e.to_string())
     }
 }
 // impl From<toml::ser::Error> for Error {
@@ -79,6 +83,13 @@ impl From<tera::Error> for Error {
 //         Error::SerializationError(format!("{}", e))
 //     }
 // }
+
+#[derive(Debug, Clone)]
+pub enum ExecutionResult<T: ClapExecuter> {
+    Ok(T),
+    Err(T, Error),
+}
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[macro_export]

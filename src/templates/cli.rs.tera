@@ -1,14 +1,14 @@
 {% if craft_subcommands %}
 use clap::{Parser, Subcommand};
 {% else %}
-use clap::Parser;
+use clap::{Parser /*, Subcommand*/};
 {% endif %}
 {% if craft_lib %}
 use {{ package_name }}::{Result, Error, Exit};
 {% if craft_subcommands %}
 use {{ package_name }}::cli::{ParserDispatcher, SubcommandDispatcher, ArgsDispatcher};
 {% else %}
-use {{ package_name }}::cli::ParserDispatcher;
+use {{ package_name }}::cli::{ParserDispatcher /*, SubcommandDispatcher, ArgsDispatcher*/};
 {% endif %}
 {% endif %}
 {% if craft_value_enum %}

@@ -14,7 +14,7 @@ attr_fn_like_width = 20			# Maximum width of the args of a function-like attribu
 chain_width = 50                 	# Maximum length of a chain to fit on a single line.
 comment_width = 80			# Maximum length of comments. No effect unless wrap_comments = true
 doc_comment_code_block_width = 100	# Maximum width for code snippets in doc comments. No effect unless format_code_in_doc_comments = true
-fn_call_width = 79			# Maximum width of the args of a function call before falling back to vertical formatting.
+fn_call_width = 57			# Maximum width of the args of a function call before falling back to vertical formatting.
 inline_attribute_width = 0		# Write an item and its attribute on the same line if their combined width is below a threshold
 max_width = 80  			# Maximum width of each line
 short_array_element_width_threshold = 10# Width threshold for an array element to be considered short

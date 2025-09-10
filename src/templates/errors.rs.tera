@@ -44,7 +44,6 @@ impl Error {
             {% for dependency in craft_dependencies %}
             Error::{{dependency.pascal_case}}Error(_) => "{{dependency.pascal_case}}Error",
             {% endfor %}
-
         }
         .to_string()
     }
