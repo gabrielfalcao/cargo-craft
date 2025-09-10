@@ -8,6 +8,7 @@ pub enum Error {
     ShellCommandError(String),
     IOError(String),
     SerializationError(String),
+    DeserializationError(String),
     ParseError(String),
     TemplateError(String),
     JsonError(String),
@@ -24,6 +25,7 @@ impl Display for Error {
                 Error::ShellCommandError(e) => e.to_string(),
                 Error::IOError(e) => e.to_string(),
                 Error::SerializationError(e) => e.to_string(),
+                Error::DeserializationError(e) => e.to_string(),
                 Error::ParseError(e) => e.to_string(),
                 Error::TemplateError(e) => e.to_string(),
                 Error::JsonError(e) => e.to_string(),
@@ -39,6 +41,7 @@ impl Error {
             Error::ShellCommandError(_) => "ShellCommandError",
             Error::IOError(_) => "IOError",
             Error::SerializationError(_) => "SerializationError",
+            Error::DeserializationError(_) => "DeserializationError",
             Error::ParseError(_) => "ParseError",
             Error::TemplateError(_) => "TemplateError",
             Error::JsonError(_) => "JsonError",
@@ -51,17 +54,17 @@ impl Error {
 impl std::error::Error for Error {}
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
-        Error::IOError(format!("{}", e))
+        Error::IOError(e.to_string())
     }
 }
 impl From<iocore::Error> for Error {
     fn from(e: iocore::Error) -> Self {
-        Error::IOError(format!("{}", e))
+        Error::IOError(e.to_string())
     }
 }
 impl From<clap::Error> for Error {
     fn from(e: clap::Error) -> Self {
-        Error::ParseError(format!("{}", e))
+        Error::ParseError(e.to_string())
     }
 }
 impl From<tera::Error> for Error {
@@ -78,11 +81,16 @@ impl From<serde_json::Error> for Error {
         Error::JsonError(e.to_string())
     }
 }
-// impl From<toml::ser::Error> for Error {
-//     fn from(e: toml::ser::Error) -> Self {
-//         Error::SerializationError(format!("{}", e))
-//     }
-// }
+impl From<toml::ser::Error> for Error {
+    fn from(e: toml::ser::Error) -> Self {
+        Error::SerializationError(e.to_string())
+    }
+}
+impl From<toml::de::Error> for Error {
+    fn from(e: toml::de::Error) -> Self {
+        Error::DeserializationError(e.to_string())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum ExecutionResult<T: ClapExecuter> {

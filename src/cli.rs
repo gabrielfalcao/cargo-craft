@@ -1,6 +1,6 @@
 use crate::errors::{Error, ExecutionResult, Result};
 use crate::helpers::{
-    crate_name_from_path, extend_table, into_acceptable_error_type_name,
+    absolute_path, crate_name_from_path, extend_table, into_acceptable_error_type_name,
     into_acceptable_package_name, package_name_from_string_or_path, path_to_entry_path,
     struct_name_from_package_name, to_pascal_case, valid_crate_name, valid_manifest_path,
     valid_package_name,
@@ -19,6 +19,7 @@ use toml::{Table, Value};
 #[derive(Parser, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct Craft {
     #[arg(
+        value_parser = absolute_path,
         help = "path to new directory containing new crate\n(note: use `--package-name' to define crate name instead of using `<AT>' directory name)"
     )]
     pub at: Path,
@@ -90,8 +91,12 @@ pub struct Craft {
     #[arg(short = 'e', long)]
     pub add_error_type: Vec<String>,
 
-    #[arg(short, long)]
-    pub no_rollback: bool,
+    #[arg(
+        short = 'R',
+        long = "rollback-on-error",
+        help = "deletes project directory in case of build error"
+    )]
+    pub rollback: bool,
 
     #[arg(short, long)]
     pub force: bool,
@@ -122,13 +127,17 @@ pub trait ClapExecuter: Parser + std::fmt::Debug {
     }
     fn args() -> Vec<String> {
         let argv = iocore::env::args();
+        let argc = argv.len();
         let execname = Path::new(&argv[0]).name();
-        let shift_args = execname == "cargo";
+        let shift_args = execname == "cargo" && argc > 1 && argv[1] == "craft";
         let args = if shift_args {
             argv[1..].to_vec()
         } else {
             argv.to_vec()
         };
+        if shift_args {
+            dbg!(&argv, execname, &shift_args, &args);
+        }
         args
     }
 }
@@ -157,12 +166,13 @@ impl Craft {
     }
     pub fn lib_path(&self) -> Path {
         if self.main {
-            self.path_to("src")
+            Path::new("src")
         } else {
             let lib_path_sanitized =
                 crate_name_from_path(&self.lib_path.clone().unwrap_or_else(|| self.crate_name()))
                     .expect("lib-path sanitized via crate_name_from_path");
-            self.path_to(lib_path_sanitized)
+            dbg!(&lib_path_sanitized);
+            Path::new(lib_path_sanitized)
         }
         .relative_to_cwd()
     }
@@ -204,12 +214,16 @@ impl Craft {
     pub fn bin_entries(&self) -> Vec<Table> {
         let mut entries = Vec::<Table>::new();
         for name in self.bin_names() {
+            let is_cargo = name.starts_with("cargo-");
             let mut table = Table::new();
             table.insert("name".to_string(), Value::String(name.clone()));
-            table.insert(
-                "is_cargo".to_string(),
-                Value::Boolean(name.starts_with("cargo-")),
-            );
+            table.insert("is_cargo".to_string(), Value::Boolean(is_cargo));
+            if is_cargo {
+                table.insert(
+                    "cargo_subcommand".to_string(),
+                    Value::String(name.replacen("cargo-", "", 1).to_string()),
+                );
+            }
             table.insert(
                 "path".to_string(),
                 Value::String(
@@ -260,11 +274,7 @@ impl Craft {
         self.path_to("Cargo.toml")
     }
     pub fn default_bin_name(&self) -> Result<String> {
-        if self.main {
-            Ok("main".to_string())
-        } else {
-            Ok(render_info_string(&self.clone(), &self.default_bin_name)?)
-        }
+        Ok(render_info_string(&self.clone(), &self.default_bin_name)?)
     }
     pub fn deps(&self) -> Result<Vec<Dependency>> {
         let mut deps = Vec::new();
@@ -286,7 +296,7 @@ impl Craft {
             .collect()
     }
     pub fn rollback_on_error(&self) -> bool {
-        !self.no_rollback
+        self.rollback == true
     }
     pub fn render_templates(&self) -> Result<Vec<(String, Vec<Option<Table>>)>> {
         let mut ttargets = if !self.cli_barebones {
@@ -369,6 +379,20 @@ impl Craft {
                 }
             }
         }
+        let bin_entries_path = self.path_to("bin-entries.toml");
+        match bin_entries_path.write(
+            self.bin_entries()
+                .into_iter()
+                .map(|table| toml::to_string_pretty(&table).unwrap_or_default())
+                .collect::<Vec<String>>()
+                .join("\n# ---\n")
+                .as_bytes(),
+        ) {
+            Ok(path) => written_paths.push(path),
+            Err(error) => {
+                eprintln!("failed to write bin entries path ({bin_entries_path}): {error}");
+            }
+        };
         Ok(written_paths)
     }
     pub fn rustfmt_paths(&self, written_paths: &Vec<Path>) -> Result<()> {
@@ -527,7 +551,9 @@ impl ClapExecuter for Craft {
         };
         match args.go() {
             Ok(()) => {
-                display_post_run_messages();
+                if args.verbose {
+                    display_post_run_messages();
+                }
                 Ok(())
             }
             Err(error) => {

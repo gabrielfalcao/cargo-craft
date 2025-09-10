@@ -84,6 +84,17 @@ pub fn valid_manifest_path(val: &str) -> ::std::result::Result<Path, String> {
     Ok(path)
 }
 
+pub fn absolute_path(val: &str) -> ::std::result::Result<Path, String> {
+    let path = Path::new(val);
+    let parent = path
+        .parent()
+        .ok_or_else(|| format!("could not find parent path of `{val}'"))?;
+    Ok(parent
+        .canonicalize()
+        .map_err(|error| format!("could not canonicalize parent path of `{val}': {error}"))?
+        .join(path.name()))
+}
+
 pub fn crate_name_from_path(path: impl Into<Path>) -> ::std::result::Result<String, String> {
     let name = path.into().without_extension().name();
     let crate_name = into_acceptable_crate_name(&name);
@@ -164,11 +175,18 @@ pub fn to_pascal_case(val: impl std::fmt::Display) -> String {
 }
 pub fn words(val: impl std::fmt::Display) -> Vec<String> {
     let pattern = regex::Regex::new(r"\b\W+\b").unwrap();
-    pattern.find_iter(val.to_string().as_str()).map(|h|h.as_str().to_string()).collect()
+    pattern
+        .find_iter(val.to_string().as_str())
+        .map(|h| h.as_str().to_string())
+        .collect()
 }
 pub fn into_acceptable_error_type_name(val: &str) -> String {
     let pattern = regex::Regex::new(r"(?i)^(?<name>.*)(?:Error)?$").unwrap();
-    words(pattern.replace_all(val, "$name")).iter().map(|h|capitalize_string(h)).collect::<Vec<String>>().join("")
+    words(pattern.replace_all(val, "$name"))
+        .iter()
+        .map(|h| capitalize_string(h))
+        .collect::<Vec<String>>()
+        .join("")
 }
 
 #[cfg(test)]

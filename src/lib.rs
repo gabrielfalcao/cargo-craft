@@ -7,7 +7,7 @@ pub use crate::helpers::{
     into_acceptable_crate_name, into_acceptable_error_type_name, into_acceptable_name,
     into_acceptable_package_name, package_name_from_string_or_path, path_to_entry_path, slug,
     strip_ends, struct_name_from_package_name, to_pascal_case, valid_crate_name,
-    valid_manifest_path, valid_package_name, words,
+    valid_manifest_path, valid_package_name, words, absolute_path
 };
 pub use cli::{ClapExecuter, Craft, Dependency};
 pub use errors::{Error, Result, ExecutionResult};

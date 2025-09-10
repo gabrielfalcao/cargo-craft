@@ -1,6 +1,6 @@
 pub(crate) mod errors;
 pub use errors::{Error, Result, Exit};
-{% if craft_dispatch %}pub mod dispatch;
+{% if craft_cli %}pub mod dispatch;
 {% if craft_subcommands %}pub use dispatch::{ParserDispatcher, SubcommandDispatcher, ArgsDispatcher};
 {% else %}pub use dispatch::ParserDispatcher;{% endif %}{% endif %}
 pub(crate) mod {{ package_name }};
