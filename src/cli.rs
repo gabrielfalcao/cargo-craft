@@ -1,19 +1,18 @@
 use crate::errors::{Error, ExecutionResult, Result};
 use crate::helpers::{
-    absolute_path, crate_name_from_path, extend_table, into_acceptable_error_type_name,
-    into_acceptable_package_name, package_name_from_string_or_path, path_to_entry_path,
-    struct_name_from_package_name, to_pascal_case, valid_crate_name, valid_manifest_path,
+    absolute_path, crate_name_from_path, extend_table, into_acceptable_error_type_name, package_name_from_string_or_path, path_to_entry_path,
+    struct_name_from_package_name, to_pascal_case, valid_manifest_path,
     valid_package_name,
 };
 use crate::templates::{render, render_cli, render_info_string};
-use crate::traceback;
+use crate::{traceback, Dependency};
 use chrono::{DateTime, Local};
 use clap::CommandFactory;
 use clap::Parser;
 use iocore::Path;
 use serde::{Deserialize, Serialize};
 use std::cmp::PartialEq;
-use std::fmt::{Display, Formatter};
+use std::fmt::Display;
 use toml::{Table, Value};
 
 #[derive(Parser, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
@@ -287,11 +286,20 @@ impl Craft {
         }
         Ok(deps)
     }
-    pub fn error_types(&self) -> Vec<String> {
-        self.add_error_type
-            .iter()
-            .map(|h| into_acceptable_error_type_name(h))
-            .collect()
+    pub fn error_types(&self) -> Result<Vec<String>> {
+        let mut error_types_pascal_name = self
+            .deps()?
+            .into_iter()
+            .map(|dep| dep.pascal_name())
+            .collect::<Vec<String>>();
+        error_types_pascal_name.extend(
+            self.add_error_type
+                .clone()
+                .into_iter()
+                .map(|dep| into_acceptable_error_type_name(&dep))
+                .filter(|name| error_types_pascal_name.contains(name)).collect::<Vec<String>>(),
+        );
+        Ok(error_types_pascal_name)
     }
     pub fn rollback_on_error(&self) -> bool {
         self.rollback == true
@@ -599,82 +607,6 @@ impl Craft {
     }
 }
 
-#[derive(Parser, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Dependency {
-    #[arg(value_parser = valid_crate_name)]
-    pub name: String,
-
-    #[arg(short = 'F', long)]
-    pub features: Option<String>,
-
-    #[arg(long, conflicts_with = "build")]
-    pub dev: bool,
-
-    #[arg(long)]
-    pub build: bool,
-
-    #[arg(long)]
-    pub optional: bool,
-}
-impl Display for Dependency {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        let mut args = vec![self.name.to_string()];
-        if self.dev {
-            args.push("--dev".to_string());
-        }
-        if self.build {
-            args.push("--build".to_string());
-        }
-        if self.optional {
-            args.push("--optional".to_string());
-        }
-        let features = self.features();
-        if features.len() > 0 {
-            args.push(format!("-F{}", features.join(",")));
-        }
-        write!(f, "{}", args.join(" "))
-    }
-}
-
-impl Dependency {
-    pub fn features(&self) -> Vec<String> {
-        let mut features = Vec::<String>::new();
-        for h in self
-            .features
-            .clone()
-            .unwrap_or_default()
-            .split(",")
-            .filter(|h| h.trim().len() > 0)
-        {
-            features.push(h.to_string());
-        }
-        features
-    }
-    pub fn to_tera(&self) -> Table {
-        let mut dep = Table::new();
-        dep.insert("name".to_string(), Value::String(self.name.to_string()));
-        dep.insert(
-            "package_name".to_string(),
-            Value::String(into_acceptable_package_name(self.name.as_str())),
-        );
-        dep.insert(
-            "features".to_string(),
-            Value::Array(
-                self.features()
-                    .iter()
-                    .map(|h| Value::String(h.to_string()))
-                    .collect(),
-            ),
-        );
-        dep.insert("pascal_case".to_string(), Value::String(self.pascal_name()));
-        dep.insert("dev".to_string(), Value::Boolean(self.dev));
-        dep.insert("build".to_string(), Value::Boolean(self.build));
-        dep
-    }
-    pub fn pascal_name(&self) -> String {
-        to_pascal_case(self.name.as_str())
-    }
-}
 impl Craft {
     pub fn receipts_path() -> Path {
         Path::new("~/.cargo/craft-receipts.ldjson").try_canonicalize()
@@ -774,17 +706,17 @@ mod test_craft {
             verbose: false,
             quiet_add: true,
             offline: true,
-            no_rollback: true,
-            default_bin_name: "main".to_string(),
+            rollback: false,
+            default_bin_name: name.to_string(),
             add_error_type: Vec::new(),
             force: true,
-            cli_barebones: false,
             silent: false,
             started_at: Local::now(),
-            finished_at: Some(Local::now() + TimeDelta::new(3600, 0)),
+            finished_at: Some(Local::now() + TimeDelta::new(3600, 0).unwrap()),
             runtime_errors: Vec::new(),
             description: None,
             script: true,
+            subcommand_names: Vec::new(),
         }
     }
     #[test]
@@ -850,7 +782,7 @@ mod test_craft {
         Ok(())
     }
     #[test]
-    fn test_craft_paths() {
+    fn test_craft_paths() -> Result<()>{
         let mut craft = craft_from_name("dummy9");
         craft.main = false;
 
@@ -860,8 +792,10 @@ mod test_craft {
         assert_equal!(craft.lib_path().to_string(), "dummy9");
         assert_equal!(
             craft.bin_path().to_string(),
-            craft.project_path().to_string()
+            "tmp/test/dummy9"
         );
+        assert_equal!(craft.default_bin_name()?, "dummy9");
         assert_equal!(craft.bin_names(), vec!["dummy9"]);
+        Ok(())
     }
 }

@@ -20,11 +20,11 @@ where
     }
     fn args() -> (Vec<String>, bool) {
         let argv = iocore::env::args();
+        {% if is_cargo_command %}
         let argc = argv.len();
         let execname = iocore::Path::new(&argv[0]).name();
-        {% if is_cargo_command %}
-        let shift_args = execname == "cargo" {% for entry in crate_binaries %}{% if entry.is_cargo %}
-        || ((execname == "cargo" || execname == "{{entry["name"]}}") && argc > 1 && argv[1].to_string() == "{{ entry.cargo_subcommand }}")
+        let shift_args = (execname == "cargo" && argc > 1) {% for entry in crate_binaries %}{% if entry.is_cargo %}
+        || (argc > 1 && (execname == "cargo" || execname == "{{entry["name"]}}") && argv[1].to_string() == "{{ entry.cargo_subcommand }}")
         {% endif %}{% endfor %};
         let is_cargo = execname == "cargo" {% for entry in crate_binaries %}{% if entry.is_cargo %}
         || execname == "{{entry["name"]}}"

@@ -78,7 +78,7 @@ pub fn tera(craft: &Craft) -> Result<(Tera, Context)> {
             .map(|dep| dep.to_tera())
             .collect::<Vec<toml::Table>>(),
     );
-    context.insert("craft_errors", &craft.error_types());
+    context.insert("craft_errors", &craft.error_types()?);
     Ok((tera, context))
 }
 pub fn render(craft: &Craft, template_name: &str) -> Result<Option<String>> {
