@@ -129,15 +129,13 @@ pub trait ClapExecuter: Parser + std::fmt::Debug {
         let argv = iocore::env::args();
         let argc = argv.len();
         let execname = Path::new(&argv[0]).name();
-        let shift_args = execname == "cargo" && argc > 1 && argv[1] == "craft";
+        let shift_args =
+            (execname == "cargo" || execname == "cargo-craft") && argc > 1 && argv[1] == "craft";
         let args = if shift_args {
             argv[1..].to_vec()
         } else {
             argv.to_vec()
         };
-        if shift_args {
-            dbg!(&argv, execname, &shift_args, &args);
-        }
         args
     }
 }
@@ -480,21 +478,26 @@ impl Craft {
                 );
             }
         }
-        receipts.extend(receipts.clone());
-        let lines = receipts
-            .into_iter()
-            .map(|receipt| {
-                serde_json::to_string(&receipt)
-                    .unwrap_or_default()
-                    .trim()
-                    .to_string()
-            })
-            .filter(|line| !line.is_empty())
-            .map(String::from)
-            .collect::<Vec<String>>();
+        let prevcount = receipts.len();
+        receipts.push(receipt.clone());
+        let curcount = receipts.len();
 
-        let wrote_to = path.write(lines.join("\n").as_bytes())?;
-        eprintln!("wrote receipt to: {wrote_to}");
+        if curcount > prevcount {
+            let lines = receipts
+                .into_iter()
+                .map(|receipt| {
+                    serde_json::to_string(&receipt)
+                        .unwrap_or_default()
+                        .trim()
+                        .to_string()
+                })
+                .filter(|line| !line.is_empty())
+                .map(String::from)
+                .collect::<Vec<String>>();
+
+            let wrote_to = path.write(lines.join("\n").as_bytes())?;
+            eprintln!("wrote receipt to: {wrote_to}");
+        }
         Ok(())
     }
     pub fn call_cargo_subcommand<T: Display + for<'a> PartialEq<&'a str>>(
