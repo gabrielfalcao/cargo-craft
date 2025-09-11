@@ -659,7 +659,17 @@ fn history_path() -> Path {
 pub fn write_history() -> Result<Vec<String>> {
     let mut history = history_path().read_lines().unwrap_or_default();
     let ts = chrono::Utc::now().format("%Y/%m/%d %H:%M:%S %Z");
-    let args = iocore::env::args().join(" ");
+    let args = iocore::env::args()
+        .into_iter()
+        .map(|arg| {
+            if arg.starts_with("-") {
+                arg.to_string()
+            } else {
+                format!("'{arg}'")
+            }
+        })
+        .collect::<Vec<String>>()
+        .join(" ");
     let current = format!("[{ts}] {args}");
     history.insert(0, current);
     let data = history.join("\n");
