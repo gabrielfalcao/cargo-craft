@@ -1,8 +1,8 @@
 use crate::errors::{Error, ExecutionResult, Result};
 use crate::helpers::{
-    absolute_path, crate_name_from_path, extend_table, into_acceptable_error_type_name, package_name_from_string_or_path, path_to_entry_path,
-    struct_name_from_package_name, to_pascal_case, valid_manifest_path,
-    valid_package_name,
+    absolute_path, crate_name_from_path, extend_table, into_acceptable_error_type_name,
+    package_name_from_string_or_path, path_to_entry_path, struct_name_from_package_name,
+    to_pascal_case, valid_manifest_path, valid_package_name,
 };
 use crate::templates::{render, render_cli, render_info_string};
 use crate::{traceback, Dependency};
@@ -162,13 +162,12 @@ impl Craft {
         self.version.clone()
     }
     pub fn lib_path(&self) -> Path {
-        if self.main {
+        if self.single_main_bin() {
             Path::new("src")
         } else {
             let lib_path_sanitized =
                 crate_name_from_path(&self.lib_path.clone().unwrap_or_else(|| self.crate_name()))
                     .expect("lib-path sanitized via crate_name_from_path");
-            dbg!(&lib_path_sanitized);
             Path::new(lib_path_sanitized)
         }
         .relative_to_cwd()
@@ -177,7 +176,7 @@ impl Craft {
         self.path()
     }
     pub fn bin_path(&self) -> Path {
-        if self.main {
+        if self.single_main_bin() {
             self.lib_path()
         } else {
             self.path_to(&self.bin_path).relative_to_cwd()
@@ -208,24 +207,38 @@ impl Craft {
 
         binaries
     }
+    pub fn single_main_bin(&self) -> bool {
+        self.main || self.cli_barebones
+    }
     pub fn bin_entries(&self) -> Vec<Table> {
         let mut entries = Vec::<Table>::new();
-        for name in self.bin_names() {
+        let bin_names = self.bin_names();
+        let bin_count = bin_names.len();
+        for (index, name) in bin_names.into_iter().enumerate() {
             let is_cargo = name.starts_with("cargo-");
             let mut table = Table::new();
+            let bin_rs_filename = if bin_count == 1 && self.single_main_bin() {
+                "main.rs".to_string()
+            } else {
+                format!("{name}.rs")
+            };
+            table.insert("index".to_string(), Value::Integer(index as i64));
             table.insert("name".to_string(), Value::String(name.clone()));
             table.insert("is_cargo".to_string(), Value::Boolean(is_cargo));
-            if is_cargo {
-                table.insert(
-                    "cargo_subcommand".to_string(),
-                    Value::String(name.replacen("cargo-", "", 1).to_string()),
-                );
-            }
+            table.insert(
+                "cargo_subcommand".to_string(),
+                if is_cargo {
+                    Value::String(name.replacen("cargo-", "", 1).to_string())
+                } else {
+                    Value::Boolean(false)
+                },
+            );
+
             table.insert(
                 "path".to_string(),
                 Value::String(
                     Path::new(&self.bin_path())
-                        .join(format!("{}.rs", name))
+                        .join(bin_rs_filename)
                         .to_string(),
                 ),
             );
@@ -297,7 +310,8 @@ impl Craft {
                 .clone()
                 .into_iter()
                 .map(|dep| into_acceptable_error_type_name(&dep))
-                .filter(|name| error_types_pascal_name.contains(name)).collect::<Vec<String>>(),
+                .filter(|name| error_types_pascal_name.contains(name))
+                .collect::<Vec<String>>(),
         );
         Ok(error_types_pascal_name)
     }
@@ -410,7 +424,7 @@ impl Craft {
         Ok(())
     }
     pub fn is_cli(&self) -> bool {
-        self.main || self.cli
+        self.main || self.cli || self.cli_barebones
     }
     pub fn cargo_add_dependencies(&self) -> Result<()> {
         if self.is_cli() {
@@ -782,7 +796,7 @@ mod test_craft {
         Ok(())
     }
     #[test]
-    fn test_craft_paths() -> Result<()>{
+    fn test_craft_paths() -> Result<()> {
         let mut craft = craft_from_name("dummy9");
         craft.main = false;
 
@@ -790,10 +804,7 @@ mod test_craft {
 
         assert_equal!(craft.project_path().to_string(), "./tmp/test/dummy9");
         assert_equal!(craft.lib_path().to_string(), "dummy9");
-        assert_equal!(
-            craft.bin_path().to_string(),
-            "tmp/test/dummy9"
-        );
+        assert_equal!(craft.bin_path().to_string(), "tmp/test/dummy9");
         assert_equal!(craft.default_bin_name()?, "dummy9");
         assert_equal!(craft.bin_names(), vec!["dummy9"]);
         Ok(())

@@ -7,7 +7,7 @@ cargo_craft() {
         rm -rf "$path"
     fi
     set -e
-    cargo craft --quiet-add --no-rollback $*
+    cargo craft --quiet-add $*
 }
 exit_on_fail() {
     path="$1"

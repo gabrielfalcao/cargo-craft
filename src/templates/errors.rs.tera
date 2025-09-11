@@ -9,9 +9,6 @@ pub enum Error {
     {% for name in craft_errors %}
     {{name}}Error(String),
     {% endfor %}
-    {% for dependency in craft_dependencies %}
-    {{dependency.pascal_case}}Error(String),
-    {% endfor %}
 }
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -25,9 +22,6 @@ impl Display for Error {
                 {% for name in craft_errors %}
                 Error::{{name}}Error(e) => e.to_string(),
                 {% endfor %}
-                {% for dependency in craft_dependencies %}
-                Error::{{dependency.pascal_case}}Error(e) => e.to_string(),
-                {% endfor %}
             }
         )
     }
@@ -40,9 +34,6 @@ impl Error {
             Error::RuntimeError(_) => "RuntimeError",
             {% for name in craft_errors %}
             Error::{{name}}Error(_) => "{{name}}Error",
-            {% endfor %}
-            {% for dependency in craft_dependencies %}
-            Error::{{dependency.pascal_case}}Error(_) => "{{dependency.pascal_case}}Error",
             {% endfor %}
         }
         .to_string()
