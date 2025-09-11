@@ -399,20 +399,6 @@ impl Craft {
                 }
             }
         }
-        let bin_entries_path = self.path_to("bin-entries.toml");
-        match bin_entries_path.write(
-            self.bin_entries()
-                .into_iter()
-                .map(|table| toml::to_string_pretty(&table).unwrap_or_default())
-                .collect::<Vec<String>>()
-                .join("\n# ---\n")
-                .as_bytes(),
-        ) {
-            Ok(path) => written_paths.push(path),
-            Err(error) => {
-                eprintln!("failed to write bin entries path ({bin_entries_path}): {error}");
-            }
-        };
         Ok(written_paths)
     }
     pub fn rustfmt_paths(&self, written_paths: &Vec<Path>) -> Result<()> {
