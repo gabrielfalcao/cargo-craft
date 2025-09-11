@@ -54,11 +54,11 @@ impl ParserDispatcher<Error> for Cli {
                     println!("{}", &self.text());
                 },
                 Std::Err => {
-                    eprintln!("{}", &self.text.join(" "));
+                    eprintln!("{}", &self.text());
                 },
             }
             {% else %}
-            println!("{}", &self.text.join(" "));
+            println!("{}", &self.text());
             {% endif %}
         {% endif %}
         Ok(())
@@ -154,7 +154,7 @@ impl ValueEnum for Std {
                 },
             }
             {% else %}
-            println!("{}", &self.text.join(" "));
+            println!("{}", &self.text());
             {% endif %}
             Ok(())
         }
