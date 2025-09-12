@@ -2,7 +2,7 @@ cargo-features = ["per-package-target"]
 
 [package]
 name = "cargo-craft"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]

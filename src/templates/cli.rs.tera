@@ -117,19 +117,23 @@ impl ValueEnum for Std {
 {% if craft_subcommands %}
     #[derive(Subcommand, Debug, Clone)]
     pub enum Command {
-        Hello(HelloOpt),
+        {% for subcommand in subcommands %}
+        {{subcommand.pascalcase}}({{subcommand.pascalcase}}Opt),
+        {% endfor %}
     }
     impl SubcommandDispatcher<Error> for Command {
         fn dispatch(&self) -> Result<()> {
             match self {
-                Command::Hello(op) => op.dispatch()?,
+                {% for subcommand in subcommands %}
+                Command::{{subcommand.pascalcase}}(op) => op.dispatch()?,
+                {% endfor %}
             }
             Ok(())
         }
     }
-
+    {% for subcommand in subcommands %}
     #[derive(Parser, Debug, Clone)]
-    pub struct HelloOpt {
+    pub struct {{subcommand.pascalcase}}Opt {
         #[arg()]
         text: Vec<String>,
     {% if craft_value_enum %}
@@ -137,12 +141,12 @@ impl ValueEnum for Std {
         std: Std,
     {% endif %}
     }
-    impl HelloOpt {
+    impl {{subcommand.pascalcase}}Opt {
         pub fn text(&self) -> String {
             self.text.join(" ")
         }
     }
-    impl ArgsDispatcher<Error> for HelloOpt {
+    impl ArgsDispatcher<Error> for {{subcommand.pascalcase}}Opt {
         fn dispatch(&self) -> Result<()> {
             {% if craft_value_enum %}
             match &self.std {
@@ -159,6 +163,8 @@ impl ValueEnum for Std {
             Ok(())
         }
     }
+    {% endfor %}
+
 {% endif %}
 
 fn main() -> Exit {

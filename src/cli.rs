@@ -151,9 +151,6 @@ impl Craft {
         } else {
             vec!["hello".to_string()]
         }
-        .into_iter()
-        .map(to_pascal_case)
-        .collect()
     }
     pub fn struct_name(&self) -> String {
         struct_name_from_package_name(&self.package_name())
