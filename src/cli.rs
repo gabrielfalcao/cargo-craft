@@ -307,7 +307,6 @@ impl Craft {
                 .clone()
                 .into_iter()
                 .map(|dep| into_acceptable_error_type_name(&dep))
-                .filter(|name| error_types_pascal_name.contains(name))
                 .collect::<Vec<String>>(),
         );
         Ok(error_types_pascal_name)
