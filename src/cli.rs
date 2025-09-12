@@ -458,7 +458,7 @@ impl Craft {
 
         self.run_git_ops()?;
 
-        for subcommand in ["check", "build", "test"] {
+        for subcommand in ["check", "build", "test", "doc"] {
             self.call_cargo_subcommand(subcommand)?;
         }
 
