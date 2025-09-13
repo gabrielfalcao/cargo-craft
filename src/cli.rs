@@ -2,7 +2,7 @@ use crate::errors::{Error, ExecutionResult, Result};
 use crate::helpers::{
     absolute_path, crate_name_from_path, extend_table, into_acceptable_error_type_name,
     package_name_from_string_or_path, path_to_entry_path, struct_name_from_package_name,
-    to_pascal_case, valid_manifest_path, valid_package_name,
+    to_pascal_case, valid_manifest_path, valid_package_name, valid_subcommand_name,
 };
 use crate::templates::{render, render_cli, render_info_string};
 use crate::{traceback, Dependency};
@@ -46,7 +46,7 @@ pub struct Craft {
     )]
     pub default_bin_name: String,
 
-    #[arg(short, long)]
+    #[arg(short, long, value_delimiter = ',')]
     pub bin: Vec<String>,
 
     #[arg(short, long, conflicts_with = "main")]
@@ -69,7 +69,7 @@ pub struct Craft {
     #[arg(short, long, requires = "cli")]
     pub subcommands: bool,
 
-    #[arg(short = 'C', long = "subcommand", help="add subcommands", value_parser=valid_package_name, requires="subcommands")]
+    #[arg(short = 'C', long = "subcommand", help="add subcommands", value_parser=valid_subcommand_name, requires="subcommands",value_delimiter=',')]
     pub subcommand_names: Vec<String>,
 
     #[arg(short, long)]

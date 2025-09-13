@@ -62,6 +62,14 @@ pub fn valid_package_name(val: &str) -> ::std::result::Result<String, String> {
         Err(format!("{:#?} is not a valid package name", val))
     }
 }
+pub fn valid_subcommand_name(val: &str) -> ::std::result::Result<String, String> {
+    let re = Regex::new(r"^[a-z]+([_-][a-z0-9]+|[a-z0-9]+)+$").unwrap();
+    if re.is_match(val) {
+        Ok(val.to_string())
+    } else {
+        Err(format!("{:#?} is not a valid subcommand name", val))
+    }
+}
 pub fn path_to_entry_path(entry: Option<Table>) -> Option<Path> {
     match entry?.get("path")? {
         Value::String(path) => Some(Path::new(path)),
