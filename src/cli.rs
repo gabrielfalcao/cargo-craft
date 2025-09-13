@@ -2,7 +2,7 @@ use crate::errors::{Error, ExecutionResult, Result};
 use crate::helpers::{
     absolute_path, crate_name_from_path, extend_table, into_acceptable_error_type_name,
     package_name_from_string_or_path, path_to_entry_path, struct_name_from_package_name,
-    to_pascal_case, valid_manifest_path, valid_package_name,
+    to_pascal_case, valid_manifest_path, valid_package_name, valid_subcommand_name,
 };
 use crate::templates::{render, render_cli, render_info_string};
 use crate::{traceback, Dependency};
@@ -46,7 +46,7 @@ pub struct Craft {
     )]
     pub default_bin_name: String,
 
-    #[arg(short, long)]
+    #[arg(short, long, value_delimiter = ',')]
     pub bin: Vec<String>,
 
     #[arg(short, long, conflicts_with = "main")]
@@ -69,7 +69,7 @@ pub struct Craft {
     #[arg(short, long, requires = "cli")]
     pub subcommands: bool,
 
-    #[arg(short = 'C', long = "subcommand", help="add subcommands", value_parser=valid_package_name, requires="cli")]
+    #[arg(short = 'C', long = "subcommand", help="add subcommands", value_parser=valid_subcommand_name, requires="subcommands",value_delimiter=',')]
     pub subcommand_names: Vec<String>,
 
     #[arg(short, long)]
@@ -151,15 +151,24 @@ impl Craft {
         } else {
             vec!["hello".to_string()]
         }
-        .into_iter()
-        .map(to_pascal_case)
-        .collect()
     }
     pub fn struct_name(&self) -> String {
         struct_name_from_package_name(&self.package_name())
     }
     pub fn version(&self) -> String {
         self.version.clone()
+    }
+    pub fn path(&self) -> Path {
+        self.at.clone()
+    }
+    pub fn path_to(&self, to: impl Display) -> Path {
+        self.path().join(to.to_string())
+    }
+    pub fn project_path(&self) -> Path {
+        self.path()
+    }
+    pub fn single_main_bin(&self) -> bool {
+        self.main || self.cli_barebones
     }
     pub fn lib_path(&self) -> Path {
         if self.single_main_bin() {
@@ -171,9 +180,6 @@ impl Craft {
             Path::new(lib_path_sanitized)
         }
         .relative_to_cwd()
-    }
-    pub fn project_path(&self) -> Path {
-        self.path()
     }
     pub fn bin_path(&self) -> Path {
         if self.single_main_bin() {
@@ -206,9 +212,6 @@ impl Craft {
         }
 
         binaries
-    }
-    pub fn single_main_bin(&self) -> bool {
-        self.main || self.cli_barebones
     }
     pub fn bin_entries(&self) -> Vec<Table> {
         let mut entries = Vec::<Table>::new();
@@ -274,12 +277,6 @@ impl Craft {
         );
         Some(extend_table(&Craft::bin_options(), &entry))
     }
-    pub fn path(&self) -> Path {
-        self.at.clone()
-    }
-    pub fn path_to(&self, to: impl Display) -> Path {
-        self.path().join(to.to_string())
-    }
     pub fn manifest_path(&self) -> Path {
         self.path_to("Cargo.toml")
     }
@@ -310,7 +307,6 @@ impl Craft {
                 .clone()
                 .into_iter()
                 .map(|dep| into_acceptable_error_type_name(&dep))
-                .filter(|name| error_types_pascal_name.contains(name))
                 .collect::<Vec<String>>(),
         );
         Ok(error_types_pascal_name)

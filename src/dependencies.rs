@@ -12,7 +12,7 @@ pub struct Dependency {
     #[arg(value_parser = valid_crate_name)]
     pub name: String,
 
-    #[arg(short = 'F', long)]
+    #[arg(short = 'F', long, value_delimiter=',')]
     pub features: Option<String>,
 
     #[arg(long, conflicts_with = "build")]
